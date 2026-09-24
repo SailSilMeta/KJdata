@@ -10,8 +10,8 @@ GET /api/timetable
     2. 只返回标准化后的字段，不向前端暴露正方原始数据
 
 缓存策略：
-    Vercel 的 Python 函数在被复用（warm）时模块级变量会保留，
-    因此使用模块级字典做进程内缓存；实例冷启动会重建，属预期行为。
+    服务进程热启动（warm）时模块级变量会保留，
+    因此使用模块级字典做进程内缓存；进程冷启动会重建，属预期行为。
 """
 
 import json
@@ -24,7 +24,6 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler
 
 # 保证同目录下的 config.py 与 zfn_api.py 能被导入
-# （Vercel 以 api/ 内单个文件作为函数入口，默认不把该目录加入 sys.path）
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import config
@@ -273,17 +272,10 @@ def _handle_request(force_refresh=False):
 
 
 # ============================================================
-# Vercel Serverless 入口
-# ============================================================
-# Vercel 的 Python 运行时在 api/*.py 中识别以下顶层名字作为入口：
-#     app         → ASGI 或 WSGI 应用（本项目用的就是这个，纯标准库实现）
-#     application → WSGI 应用
-#     handler     → 必须是继承 BaseHTTPRequestHandler 的「类」（注意是类，不是函数）
-#
-# 所以线上真正生效的入口是本文件里的 WSGI app()，下面的 handler(event, context)
-# 只是按需求额外提供的适配函数（Vercel 并不会用这个签名调用它）。
-#
 # WSGI 入口
+# ============================================================
+# 若以后要部署到支持 WSGI 的平台，app() 即为标准入口；
+# 本地调试走文件末尾的 DebugHandler，两者共用 _handle_request()。
 def app(environ, start_response):
     """WSGI 入口：GET /api/timetable，返回标准化课表 JSON。"""
     method = (environ.get("REQUEST_METHOD") or "GET").upper()
@@ -301,7 +293,7 @@ def app(environ, start_response):
         start_response("204 No Content", headers)
         return [b""]
 
-    # 只接管 /api 下的请求；其余路径（如 Vercel 托管的静态页）不拦截
+    # 只接管 /api 下的请求，其余路径不拦截
     if path.startswith("/api"):
         status, payload = _handle_request("refresh=1" in query)
     else:
@@ -319,9 +311,7 @@ def app(environ, start_response):
     return [body]
 
 
-# AWS Lambda 风格的适配入口
-# 注意：Vercel 的 Python 运行时没有 handler(event, context) 这种调用约定，
-# 它只认 app / application / handler(类)。保留该函数是为了：
+# AWS Lambda 风格的适配入口。保留该函数是为了：
 #   1. 满足「用 handler(event, context) 调现有逻辑并返回 JSON」的需求；
 #   2. 以后若要迁移到 Lambda / 函数计算等平台，可直接复用同一套业务逻辑。
 def handler(event, context):
@@ -381,7 +371,7 @@ class DebugHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def log_message(self, fmt, *args):
-        """把访问日志打到 stderr，方便在 Vercel 日志里排查"""
+        """把访问日志打到 stderr，方便在终端排查"""
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
 
 
@@ -392,9 +382,9 @@ class DebugHandler(BaseHTTPRequestHandler):
 #     python api/timetable.py
 #     然后打开 http://127.0.0.1:8000
 #
-# 这里复用的就是上面的 DebugHandler 与 _handle_request()，与线上 Vercel 函数
-# 执行的是同一套逻辑，因此本地看到的返回结构和错误信息与线上一致。
-# 部署到 Vercel 时本段不会执行（平台通过 WSGI app() 来调用）。
+# 这里复用的就是上面的 DebugHandler 与 _handle_request()，与 Actions 抓取脚本
+# （scripts/fetch_timetable.py）执行的是同一套逻辑，因此本地看到的返回结构、
+# 错误信息与线上生成的数据完全一致。
 if __name__ == "__main__":
     from http.server import HTTPServer
 

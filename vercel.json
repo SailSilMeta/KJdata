@@ -1,8 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "api/timetable.py": {
-      "maxDuration": 30
-    }
-  }
-}

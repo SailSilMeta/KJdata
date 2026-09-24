@@ -6,9 +6,6 @@
 __pycache__/
 *.pyc
 
-# Vercel 本地配置
-.vercel
-
 # 依赖
 node_modules/
 

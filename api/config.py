@@ -7,8 +7,8 @@
     严禁硬编码在本文件或任何会提交到公开仓库的代码中。
 
 配置位置：
-    本地开发 —— 在项目根目录 .env 中配置，配合 `vercel dev` 会自动加载
-    Vercel  —— Project → Settings → Environment Variables 中配置
+    本地开发 —— 在项目根目录 .env 中配置，本文件会自动加载
+    GitHub Actions —— 由仓库的 Secrets / Variables 注入（见 .github/workflows/）
 """
 
 import os
@@ -20,7 +20,7 @@ def _load_dotenv():
 
     只用标准库实现，避免为了读一个配置文件就引入 python-dotenv。
     .env 已在 .gitignore 中忽略，不会被提交到公开仓库；
-    部署到 Vercel 时走的是平台注入的环境变量，不会执行到这里。
+    在 Actions 里运行时走的是 Secrets / Variables 注入的环境变量，不会执行到这里。
     """
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
     if not os.path.isfile(path):
@@ -48,7 +48,7 @@ _load_dotenv()
 def _env(name, default=""):
     """读取环境变量并去掉首尾空白。
 
-    在 Vercel 控制台粘贴时很容易带上换行或空格，统一清理掉，
+    在网页端粘贴环境变量时很容易带上换行或空格，统一清理掉，
     避免出现「配置看起来没问题、但登录一直失败」的排查困难。
     """
     return (os.environ.get(name) or default).strip()
@@ -181,13 +181,13 @@ RASPISANIE = [
 # 内存缓存有效期（秒）。默认 30 分钟，避免每次访问都重新登录正方（登录较慢且可能被风控）。
 CACHE_TTL_SECONDS = int(_env("CACHE_TTL_SECONDS", "1800"))
 
-# 调用正方接口的超时时间（秒）。需要配合 vercel.json 里的 maxDuration 一起放宽。
+# 调用正方接口的超时时间（秒）。
 REQUEST_TIMEOUT = int(_env("ZF_REQUEST_TIMEOUT", "8"))
 
 
 # ============================================================
 # 五、跨域
 # ============================================================
-# 前端部署在 GitHub Pages、后端在 Vercel，两者不同源，必须显式放行。
-# 建议部署时填成 GitHub Pages 的具体地址；调试阶段可保持 * 。
+# 本地调试时前端与服务不同源（页面在 8080 或 file://，服务在 8000），必须显式放行。
+# 默认 * 只为了方便本地调试，接口不返回任何凭据，可放心保持。
 ALLOWED_ORIGIN = _env("ALLOWED_ORIGIN", "*")

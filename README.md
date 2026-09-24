@@ -44,7 +44,6 @@ timetable-system/
 │   ├── config.py               # 配置常量：学年学期、教学周起始、作息时间表
 │   └── zfn_api.py              # 正方接口库源码（已内联，无需 pip 安装）
 ├── requirements.txt            # Python 依赖（requests / rsa / pyquery）
-├── vercel.json                 # Vercel 配置（可选方案用，见附录）
 ├── .env.example                # 环境变量模板（复制为 .env 使用）
 └── README.md
 ```
@@ -240,64 +239,7 @@ python scripts/fetch_timetable.py
 
 ---
 
-## 五、Vercel Serverless 部署（可选，线上未使用）
-
-> 本项目线上走的是第四节那套静态方案，**这一节不需要做**。
-> 它只适用于「想让课表数据永远实时、不想等定时任务」的场景。
-
-1. **推送代码到 GitHub**（若尚未初始化仓库）
-
-   ```bash
-   git init
-   git add .
-   git commit -m "feat: 课表大屏展示系统"
-   git branch -M main
-   git remote add origin https://github.com/<你的用户名>/<仓库名>.git
-   git push -u origin main
-   ```
-
-   推送前确认 `.env` 没有被加入（`git status` 里不应出现 `.env`）。
-
-2. **导入项目**：打开 <https://vercel.com/new>，选择该 GitHub 仓库。
-
-3. **配置构建**：
-   - Framework Preset：`Other`
-   - Root Directory：`./`
-   - Build Command / Output Directory：留空
-
-4. **配置环境变量**：展开 `Environment Variables`，把上一节表格里的变量逐条添加
-   （`Environment` 至少勾选 `Production`，建议同时勾选 `Preview`）。
-   **不要**上传 `.env` 文件。
-
-5. **部署**：点击 `Deploy`，等待完成，得到形如 `https://xxx.vercel.app` 的域名。
-
-6. **验证接口**：浏览器打开 `https://xxx.vercel.app/api/timetable`，
-   能看到课表 JSON 即成功；报错信息会直接显示在 `error` 字段里。
-
-### 说明
-
-- `api/*.py` 会被自动识别为 Python Serverless Function，依赖从根目录的 `requirements.txt` 安装，无需额外配置运行时。
-- **入口函数要求**：Vercel 的 Python 运行时只认这三种顶层名字 —— `app`（ASGI/WSGI 应用）、
-  `application`（WSGI 应用）、`handler`（**必须是**继承 `BaseHTTPRequestHandler` 的类，注意是类不是函数）。
-  本项目线上真正生效的入口是 `api/timetable.py` 里的 **WSGI `app`**（纯标准库实现，不引框架）；
-  同文件中的 `handler(event, context)` 只是按需提供的适配函数，`DebugHandler` 类则供本地调试使用，
-  三者共用 `_handle_request()`，线上与本地行为完全一致。
-- **不要放根目录 `pyproject.toml`**：只要仓库根目录存在 `pyproject.toml`，Vercel 就会进入
-  「项目级 Python 应用」识别模式（该模式优先于 `/api` 文件级函数），并解析其中的 `[project]` 表；
-  像 `[tool.vercel] entrypoint = "..."` 这种没有 `[project]` 的文件会直接报
-  `No project table found in pyproject.toml` 而构建失败。本项目不需要它，若你本地曾创建请删除并提交。
-- **Python 版本**：Vercel 的 Python 运行时默认就是 3.12，本项目用根目录的 `.python-version` 文件
-  显式固定为 `3.12`。注意版本只能通过 `pyproject.toml`、`.python-version`、`Pipfile.lock` 三者之一指定，
-  在 `vercel.json` 里写 `runtime` 是旧版 `builds` 配置的写法，现在不生效。
-- `vercel.json` 中已把该函数的 `maxDuration` 放宽到 30 秒（登录正方较慢）。
-- 首次访问较慢属正常（需要登录正方），之后 30 分钟内走缓存，响应很快。
-- **修改环境变量后必须重新部署（Redeploy）才会生效。**
-- 该函数只接管 `/api` 开头的路径（例如 `GET /api/timetable`），其它路径不拦截。
-  前端页面请以第六节的 GitHub Pages 地址为准。
-
----
-
-## 六、GitHub Pages 设置
+## 五、GitHub Pages 设置
 
 `gh-pages` 分支已经建好，并且**由第四节的 Workflow 自动维护**（每次执行都会把整个 `public/` 重新发布上去），
 所以平时不需要手动发布前端。
@@ -319,7 +261,7 @@ python scripts/fetch_timetable.py
 
 ---
 
-## 七、手动调课使用说明
+## 六、手动调课使用说明
 
 ### 打开面板
 
@@ -367,7 +309,5 @@ python scripts/fetch_timetable.py
 | 课表改了但大屏还是旧的 | 等下一次定时执行，或到 Actions 页面手动 Run workflow |
 | 手机上样式没更新 | 浏览器缓存，强制刷新或清理缓存后重试 |
 | 某节课不该显示 / 该显示却没显示 | 检查 `SEMESTER_START_DATE` 是否正确，教学周过滤依赖它 |
-| 部署失败：`No python entrypoint found ...`（仅 Vercel 方案） | `api/*.py` 缺少 Vercel 认可的入口名，见第五节「入口函数要求」 |
-| 部署失败：`No 'project' table found in pyproject.toml`（仅 Vercel 方案） | 根目录存在多余的 `pyproject.toml`，删除并提交 |
 
 > 提醒：教务系统的登录接口不建议高频调用，本项目默认每小时更新一次，请勿把 `.github/workflows/update-timetable.yml` 里的 `cron` 改得过密。
