@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f7fa">
+  <title>课表大屏</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="page">
+    <!-- 顶部信息栏：日期 + 中文星期 + 实时时钟，右上角主题切换按钮 -->
+    <header class="topbar">
+      <div class="topbar-info">
+        <div class="date-text" id="dateText">--</div>
+        <div class="clock" id="clock">00:00:00</div>
+      </div>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="切换日间/夜间主题">🌙</button>
+    </header>
+
+    <!-- 主体：最近一节课卡片 -->
+    <main class="stage">
+      <section class="course-card" id="courseCard">
+        <div class="card-content" id="cardContent">
+          <!-- 小标题：图标 + 状态文案，随「待上课 / 上课中 / 较长假期」切换 -->
+          <span class="status-badge">
+            <span class="status-icons" id="statusIcons">⏰ 📖</span>
+            <span class="status-text" id="statusText">即将开课</span>
+          </span>
+          <h1 class="course-name" id="courseName">--</h1>
+          <div class="classroom" id="classroom">--</div>
+          <div class="course-time" id="courseTime">--:-- - --:--</div>
+          <div class="teacher" id="teacher">--</div>
+          <div class="countdown">
+            <div class="countdown-hint" id="countdownHint">距离上课还有</div>
+            <div class="countdown-main" id="countdownMain">
+              <span class="countdown-num" id="countdownNum">--</span>
+              <span class="countdown-unit">分钟</span>
+            </div>
+            <!-- 间隔超过 48 小时时替代分钟倒计时展示 -->
+            <div class="holiday-tip" id="holidayTip" hidden>距离下次开课还有较长假期，请留意课表</div>
+          </div>
+          <div class="progress" id="progress" role="progressbar" aria-label="课程进度">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <!-- 底部提示小字：随状态切换 -->
+          <div class="card-foot" id="cardFoot">做好准备，不要迟到</div>
+        </div>
+        <div class="empty-tip" id="emptyTip" hidden>暂无课程数据</div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 手动调课面板：隐藏入口，长按顶部日期区域 700ms 打开 -->
+  <div class="override-mask" id="overrideMask" hidden>
+    <div class="override-sheet" role="dialog" aria-modal="true" aria-label="手动调课">
+      <header class="override-head">
+        <h2 class="override-title">手动调课</h2>
+        <button class="override-btn override-btn-ghost" id="overrideClose" type="button">关闭</button>
+      </header>
+
+      <div class="override-body">
+        <!-- 新增 / 编辑表单 -->
+        <section class="override-section">
+          <h3 class="override-subtitle" id="overrideFormTitle">新增临时课程</h3>
+          <form class="override-form" id="overrideForm" novalidate>
+            <label class="override-field">
+              <span>课程名称 *</span>
+              <input type="text" id="ovName" placeholder="如：高等数学">
+            </label>
+            <label class="override-field">
+              <span>星期 *</span>
+              <select id="ovWeekday">
+                <option value="1">周一</option>
+                <option value="2">周二</option>
+                <option value="3">周三</option>
+                <option value="4">周四</option>
+                <option value="5">周五</option>
+                <option value="6">周六</option>
+                <option value="7">周日</option>
+              </select>
+            </label>
+            <div class="override-row">
+              <label class="override-field">
+                <span>开始时间 *</span>
+                <input type="time" id="ovStart">
+              </label>
+              <label class="override-field">
+                <span>结束时间 *</span>
+                <input type="time" id="ovEnd">
+              </label>
+            </div>
+            <label class="override-field">
+              <span>教室 *</span>
+              <input type="text" id="ovClassroom" placeholder="如：实训楼203">
+            </label>
+            <label class="override-field">
+              <span>老师</span>
+              <input type="text" id="ovTeacher" placeholder="选填">
+            </label>
+            <p class="override-error" id="overrideError" hidden></p>
+            <div class="override-actions">
+              <button type="submit" class="override-btn override-btn-primary" id="ovSubmit">新增课程</button>
+              <button type="button" class="override-btn override-btn-ghost" id="ovReset">重置表单</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- 课程列表：正方课表 + 本地新增 -->
+        <section class="override-section">
+          <h3 class="override-subtitle">课程列表（含正方课表）</h3>
+          <ul class="override-list" id="overrideList"></ul>
+        </section>
+      </div>
+
+      <footer class="override-foot">
+        <span class="override-hint" id="overrideStatus">所有修改仅保存在本机浏览器</span>
+        <button class="override-btn override-btn-danger" id="overrideClear" type="button">清除全部手动修改</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- override.js 必须先加载，main.js 依赖 window.TimetableOverride -->
+  <script src="js/override.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
