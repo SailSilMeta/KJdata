@@ -1,0 +1,65 @@
+name: 更新课表并发布到 GitHub Pages
+
+# 触发方式：
+#   1. 定时（每小时一次，GitHub 的定时任务可能有几分钟延迟）
+#   2. 手动（Actions 页面 → 本 Workflow → Run workflow，改完教务系统后想立刻生效时用）
+#   3. 推送到 main（前端改了样式/逻辑后自动发布，不必再手动推 gh-pages）
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+# 需要写权限，才能把生成结果推回 gh-pages 分支
+permissions:
+  contents: write
+
+# 同一时间只允许一个实例，避免两次推送互相冲突
+concurrency:
+  group: update-timetable
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 准备 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      # 学号 / 密码只放在仓库 Secrets 里，绝不写进代码。
+      # Settings → Secrets and variables → Actions 中配置：
+      #   Secrets: ZF_BASE_URL / ZF_USERNAME / ZF_PASSWORD
+      #   Variables（可选，不配则用代码里的默认值）: ZF_YEAR / ZF_TERM / SEMESTER_START_DATE
+      - name: 登录正方教务系统并生成静态课表
+        env:
+          ZF_BASE_URL: ${{ secrets.ZF_BASE_URL }}
+          ZF_USERNAME: ${{ secrets.ZF_USERNAME }}
+          ZF_PASSWORD: ${{ secrets.ZF_PASSWORD }}
+          ZF_YEAR: ${{ vars.ZF_YEAR }}
+          ZF_TERM: ${{ vars.ZF_TERM }}
+          SEMESTER_START_DATE: ${{ vars.SEMESTER_START_DATE }}
+        run: python scripts/fetch_timetable.py
+
+      # 拉取失败时本步骤不会执行，gh-pages 保持上一次的成功结果，不会把课表数据刷成空。
+      - name: 发布 public 目录到 gh-pages 分支
+        run: |
+          git fetch origin gh-pages
+          git worktree add --detach .deploy origin/gh-pages
+          find .deploy -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          cp -r public/. .deploy/
+          cd .deploy
+          git add -A
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m "chore: 更新课表数据（$(date -u '+%Y-%m-%d %H:%M') UTC）"
+          git push origin HEAD:gh-pages

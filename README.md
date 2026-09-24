@@ -9,9 +9,10 @@
 | 项目 | 说明 |
 | --- | --- |
 | 前端 | 原生 HTML + CSS + JavaScript，纯静态，部署到 GitHub Pages |
-| 后端 | Vercel Serverless Functions（Python），调用 `zfn_api` 拉取正方课表 |
+| 数据来源 | GitHub Actions 定时登录正方拉课表，生成静态 JSON 随前端一起发布到 Pages |
+| 后端 | 线上**不需要**任何后端服务器；`api/` 里的 Python 版本只用于本地调试 |
 | 手动调课 | 前端 localStorage 覆盖层，优先级高于正方课表数据 |
-| 账号安全 | 学号 / 密码只存在于环境变量，前端代码中不出现 |
+| 账号安全 | 学号 / 密码只存在于 Actions Secrets 与本地 `.env`，前端代码中不出现 |
 
 ### 功能清单
 
@@ -21,24 +22,29 @@
 - 距离下一节课超过 **48 小时** 时自动进入假期态：隐藏倒计时与进度条，展示假期文案
 - 日间 / 夜间主题一键切换，选择记忆在浏览器中；夜间自动适配深色底与浅色文字
 - 手动调课覆盖层：新增临时课程、修改课程、临时跳过、一键清除
-- 后端 30 分钟内存缓存，避免频繁登录教务系统
+- GitHub Actions 每小时更新一次课表数据，无需人工干预
 
 ### 目录结构
 
 ```
 timetable-system/
-├── public/                     # 前端静态资源（部署 GitHub Pages）
+├── public/                     # 前端静态资源（发布到 GitHub Pages）
 │   ├── index.html              # 首页大屏
 │   ├── css/style.css           # 全局样式（日间 / 夜间主题变量）
-│   └── js/
-│       ├── main.js             # 大屏核心逻辑：接口请求、课程筛选、倒计时、进度条、主题切换
-│       └── override.js         # 手动调课覆盖层：localStorage 增删改查、数据合并
-├── api/                        # Vercel Serverless Functions（Python）
-│   ├── timetable.py            # GET /api/timetable：登录正方 → 拉课表 → 标准化 → 缓存 → 返回
-│   ├── config.py               # 配置常量：学年学期、教学周起始、作息时间表、缓存 TTL
+│   ├── js/
+│   │   ├── main.js             # 大屏核心逻辑：数据请求、课程筛选、倒计时、进度条、主题切换
+│   │   └── override.js         # 手动调课覆盖层：localStorage 增删改查、数据合并
+│   └── data/timetable.json     # 课表数据（Actions 定时生成，不入库）
+├── scripts/
+│   └── fetch_timetable.py      # 登录正方 → 拉课表 → 标准化 → 写出上面的 JSON
+├── .github/workflows/
+│   └── update-timetable.yml    # 定时抓取 + 把 public/ 发布到 gh-pages 分支
+├── api/                        # 仅本地调试用的 Python 版本（线上不部署）
+│   ├── timetable.py            # 本地 HTTP 入口：python api/timetable.py
+│   ├── config.py               # 配置常量：学年学期、教学周起始、作息时间表
 │   └── zfn_api.py              # 正方接口库源码（已内联，无需 pip 安装）
 ├── requirements.txt            # Python 依赖（requests / rsa / pyquery）
-├── vercel.json                 # Vercel 配置（函数超时 30s）
+├── vercel.json                 # Vercel 配置（可选方案用，见附录）
 ├── .env.example                # 环境变量模板（复制为 .env 使用）
 └── README.md
 ```
@@ -46,16 +52,20 @@ timetable-system/
 ### 数据流
 
 ```
-浏览器 ──GET /api/timetable──▶ Vercel 函数 ──▶ 登录正方教务系统
-   ▲                                               │
-   └── 标准化 JSON ◀── 30 分钟内存缓存 ◀── 全学期课表（按当前教学周过滤）
-   │
+【每小时】GitHub Actions
+   └─▶ scripts/fetch_timetable.py ──▶ 登录正方教务系统 ──▶ 标准化 JSON
+                                       （按当前教学周过滤）
+   └─▶ public/data/timetable.json ──▶ 随 public/ 一起发布到 gh-pages 分支
+
+【打开页面】浏览器（GitHub Pages，国内可直连）
+   └─▶ 读取同源静态文件 data/timetable.json
    └─▶ 与 localStorage 手动调课覆盖层合并（覆盖层优先）──▶ 渲染大屏
 ```
 
-### 接口
+### 数据文件
 
-`GET /api/timetable`（无参数；`?refresh=1` 跳过缓存强制拉取）
+前端线上读取的是同源静态文件 `data/timetable.json`（仓库里的 `public/data/timetable.json`）；
+本地开发时改读 `http://127.0.0.1:8000/api/timetable`（见第二节）。
 
 ```json
 {
@@ -74,7 +84,7 @@ timetable-system/
 }
 ```
 
-失败时返回非 200 与 `{"error": "错误说明"}`（前端会直接展示该说明）。
+`updatedAt` 是数据实际拉取的时间，可以据此判断课表数据有多新。
 
 ---
 
@@ -108,7 +118,7 @@ cp .env.example .env
 
 然后用编辑器打开 `.env`，按下一节说明填入真实信息。`.env` 已在 `.gitignore` 中忽略，不会被提交。
 
-### 4. 启动后端
+### 4. 启动本地后端
 
 ```bash
 python api/timetable.py
@@ -118,7 +128,7 @@ python api/timetable.py
 - 跳过缓存强制拉取：<http://127.0.0.1:8000/?refresh=1>
 - 用浏览器直接打开该地址即可看到返回的 JSON，便于确认字段是否正确
 
-该本地入口复用的就是 Vercel 线上同一个 `handler`，所以本地看到的结构和错误信息与线上一致。
+本地跑的就是线上同一套拉取与标准化逻辑（`scripts/fetch_timetable.py` 直接复用这个模块）。
 
 ### 5. 打开前端
 
@@ -132,28 +142,41 @@ python -m http.server 8080 --directory public
 
 然后访问 <http://127.0.0.1:8080>。
 
-> `public/js/main.js` 顶部的 `API_BASE` 会自动判断：本机打开（`localhost` / `127.0.0.1` / `file://`）自动指向
-> `http://127.0.0.1:8000`，无需改代码；部署到线上时才需要改 `PROD_API_BASE`（见第五节）。
+> `public/js/main.js` 顶部的 `DATA_URL` 会自动判断：本机打开（`localhost` / `127.0.0.1` / `file://`）指向
+> `http://127.0.0.1:8000/api/timetable`，线上指向同源静态文件 `data/timetable.json`，两种情况都无需改代码。
 
 > 修改前端文件后请 **Ctrl + F5 强制刷新**，手机浏览器可能缓存旧的 CSS / JS。
+
+### 6. 本地验证 Actions 要跑的那一步（可选）
+
+不必等 GitHub，先在本地把静态数据生成一遍，确认能正常登录并拿到课程：
+
+```bash
+python scripts/fetch_timetable.py
+```
+
+成功会打印「已生成 public\data\timetable.json：N 门课程」；失败会直接给出可读的错误原因
+（例如「登录失败：…」、`ZF_BASE_URL` 写错导致的 `code=2333`）。
+生成的 `public/data/` 已被 `.gitignore` 忽略，不会误提交。
 
 ---
 
 ## 三、环境变量配置说明
 
-在项目根目录的 `.env` 中配置（线上则在 Vercel 控制台配置同名变量）。
+在项目根目录的 `.env` 中配置（本地开发用）；线上则配置到 GitHub 仓库的
+**Settings → Secrets and variables → Actions**（见第四节），**不要把 `.env` 提交到仓库**。
 
 | 变量名 | 必填 | 说明 | 示例 |
 | --- | --- | --- | --- |
 | `ZF_BASE_URL` | 是 | 正方教务系统地址，只填到域名或应用根路径，**不要带具体页面路径** | `https://jwxt.gzus.edu.cn/` |
 | `ZF_USERNAME` | 是 | 学号 | `2024xxxxxxxx` |
 | `ZF_PASSWORD` | 是 | 密码 | `********` |
-| `ZF_YEAR` | 是 | 学年（正方接口里通常等于「开课年份」） | `2026` |
-| `ZF_TERM` | 是 | 学期，只能是 `1` 或 `2` | `1` |
+| `ZF_YEAR` | 否 | 学年（正方接口里通常等于「开课年份」），不填取当前年份 | `2026` |
+| `ZF_TERM` | 否 | 学期，只能是 `1` 或 `2`，不填为 `1` | `1` |
 | `SEMESTER_START_DATE` | 是 | 本学期**第一周的周一**日期，用于算出当前教学周，只显示本周实际开课的课程。**换学期务必修改** | `2026-08-31` |
-| `CACHE_TTL_SECONDS` | 否 | 内存缓存有效期（秒），默认 `1800` | `1800` |
+| `CACHE_TTL_SECONDS` | 否 | 内存缓存有效期（秒），默认 `1800`；**仅 `api/` 本地调试用** | `1800` |
 | `ZF_REQUEST_TIMEOUT` | 否 | 调用正方接口超时（秒），默认 `8` | `8` |
-| `ALLOWED_ORIGIN` | 否 | 允许跨域的前端来源，默认 `*`；前端上 Pages 后建议改成具体地址 | `https://your-name.github.io` |
+| `ALLOWED_ORIGIN` | 否 | 允许跨域的前端来源，默认 `*`；**仅 `api/` 本地调试用** | `https://your-name.github.io` |
 
 ### 注意事项
 
@@ -170,12 +193,57 @@ python -m http.server 8080 --directory public
 2. **作息时间表**：`api/config.py` 中的 `RASPISANIE` 是「第几节 → 上下课时间」的映射表。
    **各校差异很大，必须按本校实际作息核对修改**，否则大屏显示的起止时间会不对。
 
-3. **安全**：学号密码只允许写在 `.env` 或 Vercel 环境变量中。
-   `.env` 已被 `.gitignore` 忽略，前端代码里不出现任何凭据。
+3. **安全**：学号密码只允许写在本地 `.env` 与 GitHub Actions Secrets 中。
+   `.env` 已被 `.gitignore` 忽略，前端代码与公开仓库里不出现任何凭据。
 
 ---
 
-## 四、Vercel 部署步骤
+## 四、配置自动更新课表（GitHub Actions，必做）
+
+线上的课表数据由 GitHub Actions 定时抓取生成，**不配置这一节，页面就拿不到任何课程**。
+
+### 1. 添加密钥
+
+仓库 **Settings → Secrets and variables → Actions**：
+
+| 位置 | 名称 | 说明 |
+| --- | --- | --- |
+| Secrets | `ZF_BASE_URL` | 同第三节表格，只填到域名或应用根路径 |
+| Secrets | `ZF_USERNAME` | 学号 |
+| Secrets | `ZF_PASSWORD` | 密码 |
+| Variables（可选） | `ZF_YEAR` | 学年；不填则取运行时的当前年份 |
+| Variables（可选） | `ZF_TERM` | 学期 `1` / `2`；不填则为 `1` |
+| Variables（可选） | `SEMESTER_START_DATE` | 第一周周一日期；不填则用 `api/config.py` 里的默认值 |
+
+> Secrets 添加后无法再查看内容，只能覆盖重填，也绝不会打印到日志里。
+> 换学期时改 `ZF_YEAR` / `ZF_TERM` / `SEMESTER_START_DATE` 即可，不必动代码。
+
+### 2. 手动跑一次
+
+仓库 **Actions → 「更新课表并发布到 GitHub Pages」→ Run workflow**。
+跑完后 `gh-pages` 分支会多出 `data/timetable.json`，GitHub Pages 随即自动重新发布。
+
+### 3. 之后都是自动的
+
+| 触发方式 | 时机 |
+| --- | --- |
+| `schedule` | 每小时一次（GitHub 的定时任务可能有几分钟延迟） |
+| `push` | 推送到 `main` 分支时——改了前端样式/逻辑会自动发布，不必再手动推 `gh-pages` |
+| `workflow_dispatch` | 手动触发，教务系统改课后想立刻生效时用 |
+
+### 4. 注意事项
+
+- **拉取失败时不会发布**：Workflow 直接报错（Actions 页面可见），`gh-pages` 保持上一次的成功数据，
+  不会把课表刷成空白。下次定时执行会自动重试。
+- GitHub 会在仓库连续 60 天无活动后暂停定时任务，届时到 Actions 页面点一下 **Enable workflow** 即可。
+- 教务系统的登录接口不宜高频调用，默认每小时一次，请勿把 `cron` 改得过于频繁。
+
+---
+
+## 五、Vercel Serverless 部署（可选，线上未使用）
+
+> 本项目线上走的是第四节那套静态方案，**这一节不需要做**。
+> 它只适用于「想让课表数据永远实时、不想等定时任务」的场景。
 
 1. **推送代码到 GitHub**（若尚未初始化仓库）
 
@@ -225,83 +293,33 @@ python -m http.server 8080 --directory public
 - 首次访问较慢属正常（需要登录正方），之后 30 分钟内走缓存，响应很快。
 - **修改环境变量后必须重新部署（Redeploy）才会生效。**
 - 该函数只接管 `/api` 开头的路径（例如 `GET /api/timetable`），其它路径不拦截。
-  前端页面请以第五节的 GitHub Pages 地址为准。
+  前端页面请以第六节的 GitHub Pages 地址为准。
 
 ---
 
-## 五、GitHub Pages 部署步骤
+## 六、GitHub Pages 设置
 
-### 1. 先改前端接口地址
+`gh-pages` 分支已经建好，并且**由第四节的 Workflow 自动维护**（每次执行都会把整个 `public/` 重新发布上去），
+所以平时不需要手动发布前端。
 
-把 `public/js/main.js` 顶部的占位域名改成上一步拿到的 Vercel 域名：
+只需确认仓库的分支发布配置正确：**Settings → Pages → Build and deployment**：
 
-```js
-const PROD_API_BASE = 'https://xxx.vercel.app';
-```
+- Source 选 `Deploy from a branch`
+- Branch 选 `gh-pages`，目录选 `/(root)`
 
-### 2. 发布 public 目录
+本仓库当前已经是这个配置，一般不用再改。
 
-GitHub Pages 的分支发布只支持仓库根目录或 `/docs`，而本项目前端在 `public/`，
-所以用下面任一方式发布。
+### 检查与收尾
 
-**方式一：GitHub Actions（推荐，改完自动发布）**
-
-在仓库中新建文件 `.github/workflows/deploy-pages.yml`：
-
-```yaml
-name: Deploy frontend to GitHub Pages
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: public
-      - id: deployment
-        uses: actions/deploy-pages@v4
-```
-
-然后：仓库 **Settings → Pages → Build and deployment → Source 选 `GitHub Actions`**，
-再手动跑一次该 Workflow（或推送一次提交）。
-
-**方式二：只把 public 内容推到 gh-pages 分支**
-
-```bash
-git subtree push --prefix public origin gh-pages
-```
-
-然后：**Settings → Pages → Source 选 `Deploy from a branch` → 分支选 `gh-pages` / 目录选 `/(root)`**。
-
-### 3. 访问并收尾
-
-- Pages 地址形如 `https://<用户名>.github.io/<仓库名>/`，在 Settings → Pages 顶部可看到。
-- 回到 Vercel，把环境变量 `ALLOWED_ORIGIN` 改成该 Pages 地址（例如 `https://your-name.github.io`），
-  然后 **Redeploy**，避免前端跨域被拦。
+- Pages 地址形如 `https://<用户名>.github.io/<仓库名>/`，在 **Settings → Pages** 顶部可看到。
+- 确认数据文件可访问：浏览器打开 `https://<用户名>.github.io/<仓库名>/data/timetable.json`，
+  能看到 `courses` 数组即说明第四节的 Workflow 已经跑通。
 - 首次打开若样式或数据不对，用 **Ctrl + F5 强制刷新**；手机端同理清一下浏览器缓存。
+- 不要再手动推 `gh-pages`（例如 `git subtree push`），会和 Workflow 互相覆盖。
 
 ---
 
-## 六、手动调课使用说明
+## 七、手动调课使用说明
 
 ### 打开面板
 
@@ -340,14 +358,16 @@ git subtree push --prefix public origin gh-pages
 
 | 现象 | 原因与处理 |
 | --- | --- |
-| 部署失败：`No python entrypoint found ...` | `api/*.py` 缺少 Vercel 认可的入口名，见第四节「入口函数要求」 |
-| 部署失败：`No 'project' table found in pyproject.toml` | 根目录存在多余的 `pyproject.toml`，删除并提交（见第四节说明） |
-| 卡片显示「课表加载失败：无法连接课表服务」 | 后端没启动，或线上 `PROD_API_BASE` 填错 |
-| 502 且提示「服务端未配置环境变量」 | 没配 `.env` / Vercel 变量漏配，或改了变量没 Redeploy |
+| 线上卡片一直显示「课表加载失败：HTTP 404」或「暂无课程数据」 | 第四节的 Workflow 还没成功跑过，`gh-pages` 里没有 `data/timetable.json`；去 Actions 页面看失败原因 |
+| Workflow 报「服务端未配置环境变量」 | Secrets 没配、名字写错或有多余空格（见第四节） |
+| 本地卡片显示「课表加载失败：无法连接课表服务」 | 本地后端没启动：`python api/timetable.py` |
 | 登录失败 `code=2333` | `ZF_BASE_URL` 没停在应用根路径（见第三节注意事项 1） |
 | 登录失败 `code=1002` | 学号或密码错误 |
-| 时间显示不对 | 核对 `RASPISIANIE` 作息表与 `SEMESTER_START_DATE` |
+| 时间显示不对 | 核对 `api/config.py` 的 `RASPISANIE` 作息表与 `SEMESTER_START_DATE` |
+| 课表改了但大屏还是旧的 | 等下一次定时执行，或到 Actions 页面手动 Run workflow |
 | 手机上样式没更新 | 浏览器缓存，强制刷新或清理缓存后重试 |
 | 某节课不该显示 / 该显示却没显示 | 检查 `SEMESTER_START_DATE` 是否正确，教学周过滤依赖它 |
+| 部署失败：`No python entrypoint found ...`（仅 Vercel 方案） | `api/*.py` 缺少 Vercel 认可的入口名，见第五节「入口函数要求」 |
+| 部署失败：`No 'project' table found in pyproject.toml`（仅 Vercel 方案） | 根目录存在多余的 `pyproject.toml`，删除并提交 |
 
-> 提醒：教务系统的登录接口不建议高频调用，本项目已用 30 分钟缓存兜底，请勿把 `CACHE_TTL_SECONDS` 调得过小。
+> 提醒：教务系统的登录接口不建议高频调用，本项目默认每小时更新一次，请勿把 `.github/workflows/update-timetable.yml` 里的 `cron` 改得过密。

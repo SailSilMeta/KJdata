@@ -11,3 +11,6 @@ __pycache__/
 
 # 依赖
 node_modules/
+
+# Actions 定时生成、随 gh-pages 一起发布的课表数据（不入库，避免高频提交）
+public/data/

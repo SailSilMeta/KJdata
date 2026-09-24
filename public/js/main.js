@@ -15,21 +15,20 @@
 // 顶部栏展示格式：XXXX年X月X日 星期X
 const WEEK_TEXT = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
 
-// 线上后端的正式域名（Vercel 项目 kjdata 的生产域名）
-const PROD_API_BASE = 'https://kjdata.vercel.app';
-
-// 课表接口地址自动判断：
+// 课表数据来源自动判断：
 //   - 本地打开（localhost / 127.0.0.1，或直接双击 html 用 file:// 打开）→ 指向本机后端
-//   - 其它情况（部署到 GitHub Pages）→ 指向线上后端
-// 本机后端启动方式：项目根目录执行 `python api/timetable.py`，监听 127.0.0.1:8000
-const API_BASE = (() => {
+//     本机后端启动方式：项目根目录执行 `python api/timetable.py`，监听 127.0.0.1:8000
+//   - 线上（GitHub Pages）→ 读取与页面同源的静态文件 data/timetable.json
+//     该文件由 GitHub Actions 定时登录正方抓取生成（见 .github/workflows/update-timetable.yml），
+//     所以线上不需要任何后端服务器，也就绕开了 *.vercel.app 在国内被屏蔽的问题
+const DATA_URL = (() => {
   const host = location.hostname;
   const isLocal = location.protocol === 'file:' || host === 'localhost' || host === '127.0.0.1';
-  return isLocal ? 'http://127.0.0.1:8000' : PROD_API_BASE;
+  return isLocal ? 'http://127.0.0.1:8000/api/timetable' : 'data/timetable.json';
 })();
 
 const THEME_KEY = 'timetable-theme'; // 主题记忆的存储键
-const DATA_REFRESH_MS = 60000;       // 课程数据定时刷新间隔（保证后台改课后首页能同步）
+const DATA_REFRESH_MS = 5 * 60000;   // 课程数据刷新间隔：5 分钟（线上数据由 Actions 每小时更新一次，过于频繁地拉取没有意义）
 const TICK_MS = 1000;                // 倒计时刷新间隔：1 秒
 const LONG_GAP_MS = 48 * 60 * 60 * 1000; // 长间隔阈值：48 小时（2880 分钟）
 
@@ -339,7 +338,7 @@ function initTheme() {
  * 拉取课表数据并合并本地手动调课覆盖层
  *
  * 流程（核心逻辑）：
- *   1. 请求后端的 GET /api/timetable，拿正方教务的标准课表
+ *   1. 请求课表数据源（见顶部 DATA_URL），拿正方教务的标准课表
  *   2. 交给 override.js 的 TimetableOverride.merge() 合并本地覆盖层
  *      —— 本地覆盖层优先级更高：被跳过的课剔除、被修改的字段覆盖、本地新增的课追加
  *   3. 接口失败时保留上一次成功的数据（避免网络抖动导致大屏突然空白），
@@ -347,7 +346,8 @@ function initTheme() {
  */
 async function loadCourses() {
   try {
-    const res = await fetch(`${API_BASE}/api/timetable`);
+    // 带时间戳参数：避免浏览器 / GitHub Pages 的缓存让大屏读到旧数据
+    const res = await fetch(`${DATA_URL}?v=${Date.now()}`);
     // 后端出错时返回非 200 + { error: "..." }，优先取这个可读信息
     const data = await res.json().catch(() => null);
 
