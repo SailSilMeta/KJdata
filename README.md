@@ -209,11 +209,19 @@ python -m http.server 8080 --directory public
 ### 说明
 
 - `api/*.py` 会被自动识别为 Python Serverless Function，依赖从根目录的 `requirements.txt` 安装，无需额外配置运行时。
+- **入口函数要求**：Vercel 的 Python 运行时只认这三种顶层名字 —— `app`（ASGI/WSGI 应用）、
+  `application`（WSGI 应用）、`handler`（**必须是**继承 `BaseHTTPRequestHandler` 的类）。
+  本项目在 `api/timetable.py` 中导出的是 **WSGI `app`**（纯标准库实现，不引框架），
+  同一个文件里的 `handler` 类则供本地 `python api/timetable.py` 调试使用。
+  两者共用 `_handle_request()`，线上与本地行为完全一致。
+  报错 `No python entrypoint found ... (variable: handler)` 说明运行时没有接受 `handler` 类这种入口，
+  改用官方识别的 WSGI `app` 即可解决。注意 Vercel **没有** AWS Lambda 那种 `handler(event, context)` 约定，
+  写成函数不会被识别。
 - `vercel.json` 中已把该函数的 `maxDuration` 放宽到 30 秒（登录正方较慢）。
 - 首次访问较慢属正常（需要登录正方），之后 30 分钟内走缓存，响应很快。
 - **修改环境变量后必须重新部署（Redeploy）才会生效。**
-- 顺带一提：Vercel 会同时把 `public/` 作为静态站点发布，因此直接访问 `https://xxx.vercel.app/`
-  也能用（前后端同源，最省事）；如果你更想用 GitHub Pages 打开前端，继续看下一节。
+- 该函数只接管 `/api` 开头的路径（例如 `GET /api/timetable`），其它路径不拦截。
+  前端页面请以第五节的 GitHub Pages 地址为准。
 
 ---
 
@@ -328,6 +336,7 @@ git subtree push --prefix public origin gh-pages
 
 | 现象 | 原因与处理 |
 | --- | --- |
+| 部署失败：`No python entrypoint found ...` | `api/*.py` 缺少 Vercel 认可的入口名，见第四节「入口函数要求」 |
 | 卡片显示「课表加载失败：无法连接课表服务」 | 后端没启动，或线上 `PROD_API_BASE` 填错 |
 | 502 且提示「服务端未配置环境变量」 | 没配 `.env` / Vercel 变量漏配，或改了变量没 Redeploy |
 | 登录失败 `code=2333` | `ZF_BASE_URL` 没停在应用根路径（见第三节注意事项 1） |

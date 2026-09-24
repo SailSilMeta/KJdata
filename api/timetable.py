@@ -245,24 +245,88 @@ def get_timetable(force_refresh=False):
 
 
 # ============================================================
+# 请求处理（本地与线上两个入口共用同一套逻辑）
+# ============================================================
+_STATUS_TEXT = {
+    200: "OK",
+    204: "No Content",
+    404: "Not Found",
+    500: "Internal Server Error",
+    502: "Bad Gateway",
+}
+
+
+def _handle_request(force_refresh=False):
+    """执行业务逻辑，返回 (HTTP 状态码, 响应字典)。
+
+    两个入口（本地 BaseHTTPRequestHandler / 线上 WSGI app）都走这里，
+    保证本地看到的返回结构与错误信息与线上完全一致。
+    """
+    try:
+        return 200, get_timetable(force_refresh=force_refresh)
+    except RuntimeError as err:
+        # 业务 / 配置类错误：提示信息对用户可读
+        return 502, {"error": str(err)}
+    except Exception as err:  # noqa: BLE001 —— 兜底，避免函数直接崩溃
+        traceback.print_exc()
+        return 500, {"error": "服务端异常：" + str(err)}
+
+
+# ============================================================
 # Vercel Serverless 入口
 # ============================================================
+# Vercel 的 Python 运行时在 api/*.py 中按顺序识别以下顶层名字作为入口：
+#     app         → ASGI 或 WSGI 应用（本项目用 WSGI，纯标准库，不引框架）
+#     application → WSGI 应用
+#     handler     → 继承 BaseHTTPRequestHandler 的「类」（注意是类，不是函数）
+#
+# 注意：Vercel 没有 AWS Lambda 那种 handler(event, context) 约定，
+# 写成函数反而会与下面本地调试用的 handler 类同名冲突、且无法被识别。
+#
+# WSGI 版本：线上部署使用，兼容 Vercel 的两种识别方式
+#（api 目录文件级入口 / 项目级入口，两者都认 app 这个名字）
+def app(environ, start_response):
+    """WSGI 入口：GET /api/timetable，返回标准化课表 JSON。"""
+    method = (environ.get("REQUEST_METHOD") or "GET").upper()
+    path = environ.get("PATH_INFO") or "/"
+    query = environ.get("QUERY_STRING") or ""
+
+    headers = [
+        ("Access-Control-Allow-Origin", config.ALLOWED_ORIGIN),
+        ("Access-Control-Allow-Methods", "GET, OPTIONS"),
+        ("Access-Control-Allow-Headers", "Content-Type"),
+    ]
+
+    # 跨域预检
+    if method == "OPTIONS":
+        start_response("204 No Content", headers)
+        return [b""]
+
+    # 只接管 /api 下的请求；其余路径（如 Vercel 托管的静态页）不拦截
+    if path.startswith("/api"):
+        status, payload = _handle_request("refresh=1" in query)
+    else:
+        status, payload = 404, {"error": "接口不存在，课表接口为 GET /api/timetable"}
+
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+    start_response(
+        "{} {}".format(status, _STATUS_TEXT.get(status, "OK")),
+        headers + [
+            ("Content-Type", "application/json; charset=utf-8"),
+            ("Content-Length", str(len(body))),
+        ],
+    )
+    return [body]
+
+
 class handler(BaseHTTPRequestHandler):
+    """本地调试入口（python api/timetable.py）使用的 HTTP 处理类。"""
 
     def do_GET(self):
         # ?refresh=1 跳过缓存强制刷新，方便调试
-        force_refresh = "refresh=1" in (self.path or "")
-
-        try:
-            payload = get_timetable(force_refresh=force_refresh)
-        except RuntimeError as err:
-            # 业务/配置类错误：对用户可读
-            self._send_json(502, {"error": str(err)})
-        except Exception as err:  # noqa: BLE001 —— 兜底，避免函数直接崩溃
-            traceback.print_exc()
-            self._send_json(500, {"error": "服务端异常：" + str(err)})
-        else:
-            self._send_json(200, payload)
+        status, payload = _handle_request(force_refresh="refresh=1" in (self.path or ""))
+        self._send_json(status, payload)
 
     def do_OPTIONS(self):
         """跨域预检请求"""
