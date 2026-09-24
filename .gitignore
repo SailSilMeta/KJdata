@@ -1,0 +1,13 @@
+# 环境变量（含学号密码），绝对不允许提交到公开仓库
+.env
+.env.local
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# Vercel 本地配置
+.vercel
+
+# 依赖
+node_modules/

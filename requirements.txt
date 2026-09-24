@@ -1,0 +1,10 @@
+# 课程大屏展示系统 —— Python 依赖
+#
+# 说明：zfn_api 上游仓库（openschoolcn/zfn_api）没有 setup.py / pyproject.toml，
+# 也未发布到 PyPI，无法通过 pip 安装。
+# 因此已将其源码直接放入 api/zfn_api.py（MPL-2.0 许可证，允许原样引入），
+# 这里只声明它自身运行所需的第三方库。
+
+requests>=2.27.1
+rsa>=4.8
+pyquery>=1.4.3

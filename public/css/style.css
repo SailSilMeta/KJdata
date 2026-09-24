@@ -1,0 +1,690 @@
+/* ============================================================
+   课表大屏展示系统 - 全局样式
+   极简赛博科技（柔和版）：卡片圆角 20px、极淡径向渐变背景、细边框
+   日间 / 夜间主题通过 :root 与 html[data-theme="dark"] 上的 CSS 变量切换
+   ============================================================ */
+
+/* ---------- 主题变量：日间（默认） ---------- */
+:root {
+  --page-bg-center: #ffffff;   /* 背景径向渐变中心色 */
+  --page-bg-edge: #f5f7fa;     /* 背景径向渐变边缘色（极浅灰蓝） */
+
+  --card-bg: #ffffff;          /* 普通卡片背景 */
+  --card-border: #e2e8f0;      /* 卡片细边框 */
+  --card-shadow: 0 10px 32px rgba(37, 99, 235, .10);
+
+  --text-main: #0f172a;
+  --text-sub: #64748b;
+
+  --accent-blue: #2563eb;      /* 待上课：科技蓝 */
+  --accent-green: #10b981;     /* 上课中：科技绿 */
+
+  /* 课程卡片三态配色：极淡渐变底 + 细边框 + 状态主色
+     由 .is-* 类注入到 --card-accent 系列变量，供小标题 / 图标 / 进度条复用 */
+  --stat-pending-bg1: #f7faff;                       /* 待上课：极淡蓝渐变起点 */
+  --stat-pending-bg2: #e9f2ff;                       /* 待上课：极淡蓝渐变终点 */
+  --stat-pending-accent: #2563eb;                    /* 待上课：主色 */
+  --stat-pending-line: rgba(37, 99, 235, .26);       /* 待上课：细边框 */
+  --stat-pending-soft: rgba(37, 99, 235, .09);       /* 待上课：主色淡底 */
+
+  --stat-ongoing-bg1: #f6fdfa;                       /* 上课中：极淡绿渐变起点 */
+  --stat-ongoing-bg2: #e7f9f1;
+  --stat-ongoing-accent: #0d9f6e;
+  --stat-ongoing-line: rgba(16, 185, 129, .28);
+  --stat-ongoing-soft: rgba(16, 185, 129, .09);
+
+  --stat-holiday-bg1: #fff7f7;                       /* 较长假期：极淡红渐变起点 */
+  --stat-holiday-bg2: #ffeceb;
+  --stat-holiday-accent: #dd5257;
+  --stat-holiday-line: rgba(221, 82, 87, .26);
+  --stat-holiday-soft: rgba(221, 82, 87, .09);
+
+  --toggle-bg: #ffffff;
+  --toggle-border: #e2e8f0;
+
+  /* 表单控件（手动调课面板） */
+  --field-bg: #f8fafc;
+  --field-text: #0f172a;
+  /* 下拉箭头（深色），URL 中的 # 需转义为 %23 */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  /* 让浏览器用浅色渲染原生控件（下拉弹层、时间选择器） */
+  color-scheme: light;
+}
+
+/* ---------- 主题变量：夜间 ---------- */
+html[data-theme="dark"] {
+  --page-bg-center: #16233c;
+  --page-bg-edge: #0f172a;     /* 深蓝黑 */
+
+  --card-bg: #1e293b;
+  --card-border: #334155;
+  --card-shadow: 0 10px 32px rgba(0, 0, 0, .5);
+
+  --text-main: #e2e8f0;
+  --text-sub: #94a3b8;
+
+  /* 夜间小幅提高亮度，保证可读性 */
+  --accent-blue: #3b82f6;
+  --accent-green: #34d399;
+
+  /* 课程卡片三态配色：夜间改用深色底 + 提亮的浅色主色，保证图标文字清晰可读 */
+  --stat-pending-bg1: #182641;
+  --stat-pending-bg2: #101b2e;
+  --stat-pending-accent: #7cb2fb;
+  --stat-pending-line: rgba(96, 165, 250, .34);
+  --stat-pending-soft: rgba(96, 165, 250, .14);
+
+  --stat-ongoing-bg1: #13291f;
+  --stat-ongoing-bg2: #0d1c16;
+  --stat-ongoing-accent: #4fd8a8;
+  --stat-ongoing-line: rgba(52, 211, 153, .32);
+  --stat-ongoing-soft: rgba(52, 211, 153, .14);
+
+  --stat-holiday-bg1: #2b1c1f;
+  --stat-holiday-bg2: #1c1214;
+  --stat-holiday-accent: #f7a1a4;
+  --stat-holiday-line: rgba(247, 161, 164, .30);
+  --stat-holiday-soft: rgba(247, 161, 164, .14);
+
+  --toggle-bg: #1e293b;
+  --toggle-border: #334155;
+
+  /* 表单控件（手动调课面板） */
+  --field-bg: #0f172a;
+  --field-text: #e2e8f0;
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  /* 关键：声明深色配色，浏览器才会把原生下拉弹层也渲染成深色，
+     否则弹层会是浅色底 + 继承来的浅色文字，选项几乎看不清 */
+  color-scheme: dark;
+}
+
+/* ---------- 基础重置 ---------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  color: var(--text-main);
+  background-color: var(--page-bg-edge);
+  background-image: radial-gradient(circle at 50% 0%, var(--page-bg-center) 0%, var(--page-bg-edge) 70%);
+  /* 注意：不要用 background-attachment: fixed，移动端会禁用部分合成优化并强制重绘整个渐变。
+     页面本身不滚动（overflow: hidden），无需 fixed 也能铺满视口。 */
+  /* 主题切换平滑过渡 */
+  transition: background-color .45s ease, color .45s ease;
+  overflow: hidden; /* 手机竖屏一屏展示，不滚动 */
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- 页面容器：手机竖屏优先，电脑端最大 800px 居中 ---------- */
+.page {
+  height: 100vh;
+  height: 100dvh;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 12px 16px 20px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+/* ---------- 顶部信息栏 ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* 顶部日期区域同时是「长按进入手动调课」的隐藏入口 */
+.topbar-info {
+  min-width: 0;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.date-text {
+  font-size: clamp(16px, 4.2vw, 18px);
+  color: var(--text-sub);
+  letter-spacing: .02em;
+}
+
+.clock {
+  font-size: clamp(20px, 5.5vw, 24px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: color .45s ease;
+}
+
+/* 右上角主题切换按钮 */
+.theme-toggle {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid var(--toggle-border);
+  background-color: var(--toggle-bg);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, .10);
+  transition: background-color .45s ease, border-color .45s ease, transform .2s ease;
+}
+
+.theme-toggle:active {
+  transform: scale(.92);
+}
+
+/* ---------- 主体区域 ---------- */
+.stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- 课程卡片 ---------- */
+.course-card {
+  width: 100%;
+  border-radius: 20px;
+  border: 1px solid var(--card-border);
+  background-color: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  padding: clamp(20px, 6vw, 36px) clamp(18px, 5vw, 32px);
+  text-align: center;
+  transition: background-color .4s ease, color .4s ease,
+    border-color .4s ease, box-shadow .4s ease;
+}
+
+/* 待上课：极淡蓝渐变 + 细蓝边框（文字回归深色，夜间自动取浅色） */
+.course-card.is-pending {
+  --card-accent: var(--stat-pending-accent);
+  --card-accent-soft: var(--stat-pending-soft);
+  --card-accent-line: var(--stat-pending-line);
+  background-color: var(--stat-pending-bg2);
+  background-image: linear-gradient(155deg, var(--stat-pending-bg1) 0%, var(--stat-pending-bg2) 100%);
+  border-color: var(--stat-pending-line);
+}
+
+/* 上课中：极淡绿渐变 + 细绿边框 */
+.course-card.is-ongoing {
+  --card-accent: var(--stat-ongoing-accent);
+  --card-accent-soft: var(--stat-ongoing-soft);
+  --card-accent-line: var(--stat-ongoing-line);
+  background-color: var(--stat-ongoing-bg2);
+  background-image: linear-gradient(155deg, var(--stat-ongoing-bg1) 0%, var(--stat-ongoing-bg2) 100%);
+  border-color: var(--stat-ongoing-line);
+}
+
+/* 较长假期（间隔 > 48 小时）：极淡红渐变 + 细红边框 */
+.course-card.is-holiday {
+  --card-accent: var(--stat-holiday-accent);
+  --card-accent-soft: var(--stat-holiday-soft);
+  --card-accent-line: var(--stat-holiday-line);
+  background-color: var(--stat-holiday-bg2);
+  background-image: linear-gradient(155deg, var(--stat-holiday-bg1) 0%, var(--stat-holiday-bg2) 100%);
+  border-color: var(--stat-holiday-line);
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(6px, 2vw, 12px);
+}
+
+/* 小标题：图标 + 状态文案的组合胶囊 */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: clamp(13px, 3.4vw, 15px);
+  font-weight: 600;
+  letter-spacing: .08em;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background-color: var(--card-accent-soft, rgba(37, 99, 235, .09));
+  border: 1px solid var(--card-accent-line, rgba(37, 99, 235, .26));
+  color: var(--card-accent, var(--accent-blue));
+}
+
+/* 小标题里的图标：稍微放大一点，作为克制的状态装饰 */
+.status-icons {
+  font-size: clamp(14px, 3.8vw, 17px);
+  line-height: 1;
+  letter-spacing: .04em;
+}
+
+/* 课程名称：48~64px，超粗 */
+.course-name {
+  font-size: clamp(48px, 14vw, 64px);
+  font-weight: 900;
+  line-height: 1.05;
+  word-break: break-word;
+}
+
+/* 教室：40~52px，加粗（重点放大，方便快速识别教室） */
+.classroom {
+  font-size: clamp(40px, 11vw, 52px);
+  font-weight: 800;
+  line-height: 1.1;
+  word-break: break-word;
+}
+
+/* 上课时间：24~28px */
+.course-time {
+  font-size: clamp(24px, 7vw, 28px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  opacity: .95;
+}
+
+/* 授课老师：18~20px */
+.teacher {
+  font-size: clamp(18px, 5vw, 20px);
+  font-weight: 500;
+  opacity: .85;
+}
+
+/* ---------- 倒计时 ---------- */
+.countdown {
+  margin-top: clamp(4px, 1.5vw, 10px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.countdown-hint {
+  font-size: clamp(15px, 4vw, 18px);
+  font-weight: 600;
+  letter-spacing: .08em;
+  opacity: .9;
+}
+
+.countdown-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+/* 倒计时数字：56~72px，超粗，页面最醒目 */
+.countdown-num {
+  display: inline-block;
+  font-size: clamp(56px, 16vw, 72px);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  will-change: transform;
+}
+
+/* 倒计时数字变化时的平滑脉冲动画 */
+@keyframes numPop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.countdown-num.tick {
+  animation: numPop .45s ease;
+}
+
+.countdown-unit {
+  font-size: clamp(22px, 6vw, 28px);
+  font-weight: 700;
+  opacity: .9;
+}
+
+/* 长间隔（>48小时）提示文案：替代分钟倒计时 */
+.holiday-tip {
+  font-size: clamp(20px, 5.6vw, 26px);
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: .02em;
+  padding: clamp(4px, 1.5vw, 8px) 0;
+}
+
+/* ---------- 进度条 ---------- */
+/* 待上课：显示剩余等待比例（从满逐渐减少）；上课中：显示已上比例（从左往右填满） */
+/* 间隔超过 48 小时时不渲染（由 JS 控制 hidden） */
+.progress {
+  width: 80%; /* 占卡片宽度 80%，卡片内容居中因此自动水平居中 */
+  height: clamp(8px, 2.2vw, 12px);
+  margin-top: clamp(10px, 3vw, 16px);
+  border-radius: 999px;
+  /* 淡色卡片上改用状态主色的淡底与实色填充，逻辑与动画完全不变 */
+  background-color: var(--card-accent-soft, rgba(37, 99, 235, .12));
+  overflow: hidden;
+}
+
+.progress-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background-color: var(--card-accent, var(--accent-blue));
+  transform: scaleX(0);
+  transform-origin: left center;
+  /* 用 transform 而不是 width 做动画：
+     width 属于会触发布局的属性，逐帧动画会导致每帧重排；
+     transform 走合成层，移动端明显更流畅。 */
+  transition: transform 1s linear;
+  will-change: transform;
+}
+
+/* ---------- 底部提示小字 ---------- */
+/* 位置在进度条下方（长假期时进度条隐藏，它仍位于卡片底部） */
+.card-foot {
+  margin-top: clamp(2px, 1vw, 6px);
+  font-size: clamp(13px, 3.6vw, 15px);
+  font-weight: 500;
+  letter-spacing: .04em;
+  color: var(--card-accent, var(--text-sub));
+  opacity: .88;
+}
+
+/* ---------- 空状态 ---------- */
+.empty-tip {
+  font-size: clamp(18px, 5vw, 22px);
+  color: var(--text-sub);
+  padding: clamp(20px, 6vw, 32px) 0;
+}
+
+/* ============================================================
+   手动调课面板（隐藏入口：长按顶部日期区域打开）
+   独立于大屏页，允许内部滚动，不影响「首页一屏不滚动」的约束
+   ============================================================ */
+.override-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background-color: rgba(15, 23, 42, .6);
+  /* 注意：不要加 backdrop-filter: blur()。
+     全屏毛玻璃在移动端 GPU 上非常昂贵，而且背后每秒都在重绘（倒计时/进度条），
+     会持续触发重新模糊整块背景，这正是面板卡顿的主因。 */
+}
+
+.override-sheet {
+  width: min(100%, 560px);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  border: 1px solid var(--card-border);
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, .3);
+  overflow: hidden;
+}
+
+.override-head,
+.override-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  flex-shrink: 0;
+}
+
+.override-head {
+  border-bottom: 1px solid var(--card-border);
+}
+
+.override-foot {
+  border-top: 1px solid var(--card-border);
+  flex-wrap: wrap;
+}
+
+.override-title {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.override-hint {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.override-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.override-subtitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-sub);
+  margin-bottom: 10px;
+}
+
+/* ---------- 表单 ---------- */
+.override-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.override-row {
+  display: flex;
+  gap: 12px;
+}
+
+.override-row .override-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.override-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.override-field input,
+.override-field select {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  /* 用变量而非继承色，避免夜间继承浅色文字后落到浅色原生弹层上看不清 */
+  color: var(--field-text);
+  background-color: var(--field-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color .2s ease;
+}
+
+/* 下拉框：去掉系统默认外观，换成自绘箭头，日夜模式下都清晰可辨 */
+.override-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  background-image: var(--select-arrow);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px 16px;
+  cursor: pointer;
+}
+
+/* 时间选择器的时钟图标 */
+.override-field input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: .65;
+}
+
+.override-field input:focus,
+.override-field select:focus {
+  border-color: var(--accent-blue);
+}
+
+.override-error {
+  font-size: 13px;
+  color: #ef4444;
+}
+
+.override-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* ---------- 按钮 ---------- */
+.override-btn {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background-color: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: opacity .2s ease, transform .15s ease;
+}
+
+.override-btn:active {
+  transform: scale(.97);
+}
+
+.override-btn-primary {
+  background-color: var(--accent-blue);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.override-btn-danger {
+  background-color: #ef4444;
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.override-btn-ghost {
+  background-color: transparent;
+}
+
+/* ---------- 课程列表 ---------- */
+.override-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.override-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+}
+
+.override-item.is-skipped {
+  opacity: .55;
+}
+
+.override-item-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.override-item-title {
+  font-size: 15px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.override-item-meta {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.override-badge {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--accent-blue);
+  background-color: rgba(37, 99, 235, .12);
+}
+
+.override-badge.is-skipped {
+  color: #ef4444;
+  background-color: rgba(239, 68, 68, .12);
+}
+
+.override-item-ops {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.override-btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  background-color: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.override-btn-sm.is-danger {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, .4);
+}
+
+.override-empty {
+  font-size: 14px;
+  color: var(--text-sub);
+  text-align: center;
+  padding: 16px 0;
+}
+
+/* 面板打开时禁止大屏页滚动 */
+body.override-open {
+  overflow: hidden;
+}
+
+/* 尊重用户的减弱动画偏好 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
