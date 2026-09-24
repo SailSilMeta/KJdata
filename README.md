@@ -210,13 +210,17 @@ python -m http.server 8080 --directory public
 
 - `api/*.py` 会被自动识别为 Python Serverless Function，依赖从根目录的 `requirements.txt` 安装，无需额外配置运行时。
 - **入口函数要求**：Vercel 的 Python 运行时只认这三种顶层名字 —— `app`（ASGI/WSGI 应用）、
-  `application`（WSGI 应用）、`handler`（**必须是**继承 `BaseHTTPRequestHandler` 的类）。
-  本项目在 `api/timetable.py` 中导出的是 **WSGI `app`**（纯标准库实现，不引框架），
-  同一个文件里的 `handler` 类则供本地 `python api/timetable.py` 调试使用。
-  两者共用 `_handle_request()`，线上与本地行为完全一致。
-  报错 `No python entrypoint found ... (variable: handler)` 说明运行时没有接受 `handler` 类这种入口，
-  改用官方识别的 WSGI `app` 即可解决。注意 Vercel **没有** AWS Lambda 那种 `handler(event, context)` 约定，
-  写成函数不会被识别。
+  `application`（WSGI 应用）、`handler`（**必须是**继承 `BaseHTTPRequestHandler` 的类，注意是类不是函数）。
+  本项目线上真正生效的入口是 `api/timetable.py` 里的 **WSGI `app`**（纯标准库实现，不引框架）；
+  同文件中的 `handler(event, context)` 只是按需提供的适配函数，`DebugHandler` 类则供本地调试使用，
+  三者共用 `_handle_request()`，线上与本地行为完全一致。
+- **不要放根目录 `pyproject.toml`**：只要仓库根目录存在 `pyproject.toml`，Vercel 就会进入
+  「项目级 Python 应用」识别模式（该模式优先于 `/api` 文件级函数），并解析其中的 `[project]` 表；
+  像 `[tool.vercel] entrypoint = "..."` 这种没有 `[project]` 的文件会直接报
+  `No project table found in pyproject.toml` 而构建失败。本项目不需要它，若你本地曾创建请删除并提交。
+- **Python 版本**：Vercel 的 Python 运行时默认就是 3.12，本项目用根目录的 `.python-version` 文件
+  显式固定为 `3.12`。注意版本只能通过 `pyproject.toml`、`.python-version`、`Pipfile.lock` 三者之一指定，
+  在 `vercel.json` 里写 `runtime` 是旧版 `builds` 配置的写法，现在不生效。
 - `vercel.json` 中已把该函数的 `maxDuration` 放宽到 30 秒（登录正方较慢）。
 - 首次访问较慢属正常（需要登录正方），之后 30 分钟内走缓存，响应很快。
 - **修改环境变量后必须重新部署（Redeploy）才会生效。**
@@ -337,6 +341,7 @@ git subtree push --prefix public origin gh-pages
 | 现象 | 原因与处理 |
 | --- | --- |
 | 部署失败：`No python entrypoint found ...` | `api/*.py` 缺少 Vercel 认可的入口名，见第四节「入口函数要求」 |
+| 部署失败：`No 'project' table found in pyproject.toml` | 根目录存在多余的 `pyproject.toml`，删除并提交（见第四节说明） |
 | 卡片显示「课表加载失败：无法连接课表服务」 | 后端没启动，或线上 `PROD_API_BASE` 填错 |
 | 502 且提示「服务端未配置环境变量」 | 没配 `.env` / Vercel 变量漏配，或改了变量没 Redeploy |
 | 登录失败 `code=2333` | `ZF_BASE_URL` 没停在应用根路径（见第三节注意事项 1） |

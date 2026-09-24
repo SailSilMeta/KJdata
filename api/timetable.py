@@ -275,16 +275,15 @@ def _handle_request(force_refresh=False):
 # ============================================================
 # Vercel Serverless 入口
 # ============================================================
-# Vercel 的 Python 运行时在 api/*.py 中按顺序识别以下顶层名字作为入口：
-#     app         → ASGI 或 WSGI 应用（本项目用 WSGI，纯标准库，不引框架）
+# Vercel 的 Python 运行时在 api/*.py 中识别以下顶层名字作为入口：
+#     app         → ASGI 或 WSGI 应用（本项目用的就是这个，纯标准库实现）
 #     application → WSGI 应用
-#     handler     → 继承 BaseHTTPRequestHandler 的「类」（注意是类，不是函数）
+#     handler     → 必须是继承 BaseHTTPRequestHandler 的「类」（注意是类，不是函数）
 #
-# 注意：Vercel 没有 AWS Lambda 那种 handler(event, context) 约定，
-# 写成函数反而会与下面本地调试用的 handler 类同名冲突、且无法被识别。
+# 所以线上真正生效的入口是本文件里的 WSGI app()，下面的 handler(event, context)
+# 只是按需求额外提供的适配函数（Vercel 并不会用这个签名调用它）。
 #
-# WSGI 版本：线上部署使用，兼容 Vercel 的两种识别方式
-#（api 目录文件级入口 / 项目级入口，两者都认 app 这个名字）
+# WSGI 入口
 def app(environ, start_response):
     """WSGI 入口：GET /api/timetable，返回标准化课表 JSON。"""
     method = (environ.get("REQUEST_METHOD") or "GET").upper()
@@ -320,7 +319,39 @@ def app(environ, start_response):
     return [body]
 
 
-class handler(BaseHTTPRequestHandler):
+# AWS Lambda 风格的适配入口
+# 注意：Vercel 的 Python 运行时没有 handler(event, context) 这种调用约定，
+# 它只认 app / application / handler(类)。保留该函数是为了：
+#   1. 满足「用 handler(event, context) 调现有逻辑并返回 JSON」的需求；
+#   2. 以后若要迁移到 Lambda / 函数计算等平台，可直接复用同一套业务逻辑。
+def handler(event, context):
+    """handler(event, context) 适配入口，复用 _handle_request() 的业务逻辑。
+
+    :param event:   事件对象，支持 Lambda proxy 风格
+                    （读 queryStringParameters / rawQueryString 判断是否 ?refresh=1）
+    :param context: 平台上下文对象，本函数不使用
+    :return: Lambda 风格响应字典 {"statusCode", "headers", "body"}
+    """
+    query = ""
+    if isinstance(event, dict):
+        query = event.get("rawQueryString") or ""
+        if not query:
+            params = event.get("queryStringParameters") or {}
+            query = "&".join("{}={}".format(k, v) for k, v in params.items())
+
+    status, payload = _handle_request("refresh=1" in query)
+
+    return {
+        "statusCode": status,
+        "headers": {
+            "Content-Type": "application/json; charset=utf-8",
+            "Access-Control-Allow-Origin": config.ALLOWED_ORIGIN,
+        },
+        "body": json.dumps(payload, ensure_ascii=False),
+    }
+
+
+class DebugHandler(BaseHTTPRequestHandler):
     """本地调试入口（python api/timetable.py）使用的 HTTP 处理类。"""
 
     def do_GET(self):
@@ -361,9 +392,9 @@ class handler(BaseHTTPRequestHandler):
 #     python api/timetable.py
 #     然后打开 http://127.0.0.1:8000
 #
-# 这里复用的就是上面那个 handler，与线上 Vercel 函数执行的是同一套逻辑，
-# 因此本地看到的返回结构和错误信息与线上一致。
-# 部署到 Vercel 时本段不会执行（平台通过 handler 类来调用）。
+# 这里复用的就是上面的 DebugHandler 与 _handle_request()，与线上 Vercel 函数
+# 执行的是同一套逻辑，因此本地看到的返回结构和错误信息与线上一致。
+# 部署到 Vercel 时本段不会执行（平台通过 WSGI app() 来调用）。
 if __name__ == "__main__":
     from http.server import HTTPServer
 
@@ -372,4 +403,4 @@ if __name__ == "__main__":
     print("  http://127.0.0.1:{0}/".format(_port))
     print("  http://127.0.0.1:{0}/?refresh=1   跳过缓存强制拉取".format(_port))
     print("按 Ctrl+C 停止\n")
-    HTTPServer(("127.0.0.1", _port), handler).serve_forever()
+    HTTPServer(("127.0.0.1", _port), DebugHandler).serve_forever()
