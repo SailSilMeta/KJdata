@@ -12,7 +12,18 @@
 """
 
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+# 统一使用北京时间（东八区）：
+# GitHub Actions 的 runner 跑在 UTC，直接用 datetime.now() 会比北京时间慢 8 小时，
+# 会让「当前教学周」「学年」在凌晨时段算错（例如周一 00:00~08:00 会被当成上一周），
+# 输出的 updatedAt 也会与本地运行的结果相差 8 小时。
+BEIJING_TZ = timezone(timedelta(hours=8))
+
+
+def now_bj():
+    """当前北京时间（东八区），全项目统一用它取「现在」"""
+    return datetime.now(BEIJING_TZ)
 
 
 def _load_dotenv():
@@ -101,7 +112,7 @@ ZF_PASSWORD = _env("ZF_PASSWORD")   # 密码
 # ============================================================
 # 正方接口的学期只接受 1（第一学期）或 2（第二学期）。
 # 默认取当前年份的第 1 学期；换学期时改环境变量即可，不需要动代码。
-ZF_YEAR = _env("ZF_YEAR", str(datetime.now().year))
+ZF_YEAR = _env("ZF_YEAR", str(now_bj().year))
 ZF_TERM = _env("ZF_TERM", "1")
 
 
@@ -114,7 +125,7 @@ def get_year_term():
     try:
         year = int(ZF_YEAR)
     except (TypeError, ValueError):
-        year = datetime.now().year
+        year = now_bj().year
 
     try:
         term = int(ZF_TERM)

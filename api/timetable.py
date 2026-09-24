@@ -20,7 +20,6 @@ import re
 import sys
 import time
 import traceback
-from datetime import datetime
 from http.server import BaseHTTPRequestHandler
 
 # 保证同目录下的 config.py 与 zfn_api.py 能被导入
@@ -37,8 +36,8 @@ _cache = {"data": None, "expire_at": 0.0}
 
 
 def _now_str():
-    """当前时间，格式 YYYY-MM-DD HH:MM:SS"""
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    """当前北京时间，格式 YYYY-MM-DD HH:MM:SS（统一东八区，Actions runner 是 UTC）"""
+    return config.now_bj().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _current_teaching_week():
@@ -52,7 +51,7 @@ def _current_teaching_week():
     if not start:
         return None
 
-    days = (datetime.now().date() - start).days
+    days = (config.now_bj().date() - start).days
     if days < 0:
         return None
 
