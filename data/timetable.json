@@ -1,0 +1,110 @@
+{
+  "courses": [
+    {
+      "name": "高等数学II（理）",
+      "weekday": 1,
+      "startTime": "09:00",
+      "endTime": "10:20",
+      "classroom": "H4-307(江)",
+      "teacher": "何启茹"
+    },
+    {
+      "name": "大学英语III（听说进阶）",
+      "weekday": 1,
+      "startTime": "10:40",
+      "endTime": "12:00",
+      "classroom": "H2-204（江）",
+      "teacher": "安美华"
+    },
+    {
+      "name": "AI辅助应用开发",
+      "weekday": 1,
+      "startTime": "14:00",
+      "endTime": "15:20",
+      "classroom": "S-401(江)",
+      "teacher": "张蒙蒙"
+    },
+    {
+      "name": "深度学习基础与应用",
+      "weekday": 1,
+      "startTime": "15:30",
+      "endTime": "16:50",
+      "classroom": "S-307(江)",
+      "teacher": "严婷"
+    },
+    {
+      "name": "数据分析与建模",
+      "weekday": 2,
+      "startTime": "09:00",
+      "endTime": "10:20",
+      "classroom": "S-303(江)",
+      "teacher": "邓宁宁"
+    },
+    {
+      "name": "大数据技术基础与应用",
+      "weekday": 2,
+      "startTime": "10:40",
+      "endTime": "12:00",
+      "classroom": "H4-406(江)",
+      "teacher": "张爱生"
+    },
+    {
+      "name": "大数据技术基础与应用",
+      "weekday": 3,
+      "startTime": "10:40",
+      "endTime": "12:00",
+      "classroom": "H4-402(江)",
+      "teacher": "张爱生"
+    },
+    {
+      "name": "大数据算法解析",
+      "weekday": 3,
+      "startTime": "14:00",
+      "endTime": "15:20",
+      "classroom": "S-307(江)",
+      "teacher": "张思鹏"
+    },
+    {
+      "name": "实用软件工程",
+      "weekday": 3,
+      "startTime": "15:30",
+      "endTime": "16:50",
+      "classroom": "H4-509(江)",
+      "teacher": "陈伟聪"
+    },
+    {
+      "name": "高等数学II（理）",
+      "weekday": 3,
+      "startTime": "17:00",
+      "endTime": "18:20",
+      "classroom": "H3-508(江)",
+      "teacher": "何启茹"
+    },
+    {
+      "name": "数据库系统原理",
+      "weekday": 4,
+      "startTime": "09:00",
+      "endTime": "10:20",
+      "classroom": "H3-411(江)",
+      "teacher": "陈伟聪"
+    },
+    {
+      "name": "形势与政策 V",
+      "weekday": 5,
+      "startTime": "10:40",
+      "endTime": "12:00",
+      "classroom": "H3-404(江)",
+      "teacher": "都丹阳"
+    },
+    {
+      "name": "数据库系统原理",
+      "weekday": 5,
+      "startTime": "14:00",
+      "endTime": "15:20",
+      "classroom": "H4-412(江)",
+      "teacher": "陈伟聪"
+    }
+  ],
+  "updatedAt": "2026-09-24 11:12:22",
+  "source": "zf_api"
+}
