@@ -15,8 +15,8 @@
 // 顶部栏展示格式：XXXX年X月X日 星期X
 const WEEK_TEXT = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
 
-// 线上后端的正式域名（部署 Vercel 后改成自己的域名）
-const PROD_API_BASE = 'https://your-vercel-app.vercel.app';
+// 线上后端的正式域名（Vercel 项目 kjdata 的生产域名）
+const PROD_API_BASE = 'https://kjdata.vercel.app';
 
 // 课表接口地址自动判断：
 //   - 本地打开（localhost / 127.0.0.1，或直接双击 html 用 file:// 打开）→ 指向本机后端
