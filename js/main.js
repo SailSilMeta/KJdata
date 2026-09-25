@@ -61,6 +61,7 @@ const dom = {
   statusIcons: $('statusIcons'),
   statusText: $('statusText'),
   cardFoot: $('cardFoot'),
+  weekStat: $('weekStat'),
   courseName: $('courseName'),
   classroom: $('classroom'),
   courseTime: $('courseTime'),
@@ -373,6 +374,23 @@ async function loadCourses() {
 function applyOverrides() {
   courses = TimetableOverride.merge(baseCourses);
   currentKey = null; // 数据变化后强制重绘卡片
+  updateWeekStat();
+}
+
+/**
+ * 本周课程数提示（卡片最底部的小字）
+ * courses 已经是「本周课表 + 本地覆盖层合并」的结果：
+ * 后端/静态文件只包含当前教学周实际开课的课程，所以这里直接取长度即可，
+ * 手动新增、跳过、删除也会立刻反映到这个数字上。
+ */
+function updateWeekStat() {
+  const total = courses.length;
+  if (!total) {
+    dom.weekStat.hidden = true;
+    return;
+  }
+  dom.weekStat.textContent = `本周共 ${total} 门课`;
+  dom.weekStat.hidden = false;
 }
 
 // ============================================================
