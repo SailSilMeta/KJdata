@@ -12,7 +12,8 @@
     <!-- 顶部信息栏：日期 + 中文星期 + 实时时钟，右上角主题切换按钮 -->
     <header class="topbar">
       <div class="topbar-info">
-        <div class="date-text" id="dateText">--</div>
+        <!-- 日期 + 中文星期，后面接着当日（或最近一个）节假日 / 24 节气文字 -->
+        <div class="date-text"><span id="dateText">--</span><span class="festival-text" id="festivalText"></span></div>
         <div class="clock" id="clock">00:00:00</div>
       </div>
       <button class="theme-toggle" id="themeToggle" type="button" aria-label="切换日间/夜间主题">🌙</button>
