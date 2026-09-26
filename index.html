@@ -21,6 +21,221 @@
     <!-- 主体：最近一节课卡片 -->
     <main class="stage">
       <section class="course-card" id="courseCard">
+        <!-- 底层装饰：抽象校园「教学楼 + 植被」线条插画（纯矢量内联 SVG，不含任何图片或外部资源）。
+             只在「待上课」状态显示，压在卡片最底层，定位与配色由 css/style.css 的 .card-deco 控制 -->
+        <!-- preserveAspectRatio 用 slice（铺满）而不是 meet（完整装下）：
+             窄屏手机上卡片变窄变长，若用 meet 插画会被宽度锁死、缩成很小一条；
+             slice 让插画始终按装饰带高度铺满、右下对齐，超出部分裁掉左侧天空 -->
+        <svg class="card-deco card-deco-pending" viewBox="0 0 960 270" preserveAspectRatio="xMaxYMax slice" aria-hidden="true" focusable="false">
+          <!-- 地平线 与 左侧路面/草坪分界线 -->
+          <path class="dc-soft" d="M24 258H944M64 230H372"/>
+
+          <!-- 左：两层矮楼（楼体轮廓 + 挑檐线 + 两排窗格 + 分层竖线） -->
+          <rect class="dc-body" x="300" y="168" width="288" height="90"/>
+          <path class="dc-line" d="M292 161H596"/>
+          <!-- 两排窗格：夜里只留零星几扇亮着的教室，分「较亮 / 微亮 / 关闭」三档
+               （挂 dc-lit 的较亮、挂 dc-lit-dim 的微亮、仍用 dc-soft 的整夜关闭；
+                白天这三档线型完全一样，看不出区别） -->
+          <path class="dc-lit" d="M312 176h30v20h-30z M356 176h30v20h-30z M444 212h30v20h-30z"/>
+          <path class="dc-lit-dim" d="M488 212h30v20h-30z"/>
+          <path class="dc-soft" d="M400 176h30v20h-30z M444 176h30v20h-30z M488 176h30v20h-30z M532 176h30v20h-30z M312 212h30v20h-30z M356 212h30v20h-30z M400 212h30v20h-30z M532 212h30v20h-30z"/>
+          <!-- 开间分隔竖线：是楼体结构线，不点亮 -->
+          <path class="dc-soft" d="M572 168V258"/>
+
+          <!-- 右：主楼（左塔楼高、右体块矮的阶梯轮廓 + 三层窗格 + 门厅） -->
+          <rect class="dc-body" x="596" y="96" width="104" height="162"/>
+          <rect class="dc-body" x="700" y="130" width="168" height="128"/>
+          <path class="dc-line" d="M588 88H708M694 123H874"/>
+          <!-- 主楼三层窗格（15 扇）同样只留零星几扇亮着，三档零散分布 -->
+          <path class="dc-lit" d="M608 108h32v20h-32z M660 188h32v20h-32z M762 180h34v20h-34z"/>
+          <path class="dc-lit-dim" d="M712 142h34v20h-34z M812 218h34v20h-34z"/>
+          <path class="dc-soft" d="M660 108h32v20h-32z M608 148h32v20h-32z M660 148h32v20h-32z M608 188h32v20h-32z M762 142h34v20h-34z M812 142h34v20h-34z M712 180h34v20h-34z M812 180h34v20h-34z M712 218h34v20h-34z M762 218h34v20h-34z"/>
+          <!-- 门厅：内凹的入口两侧竖线 + 门洞 + 门楣小窗 -->
+          <path class="dc-line" d="M612 204V258M684 204V258"/>
+          <path class="dc-soft" d="M612 204h72v54h-72z M632 222h32v36h-32z M636 210h24v7h-24z"/>
+
+          <!-- 右翼矮楼（单列三扇小窗，夜里只有中间那扇亮着） -->
+          <rect class="dc-body" x="868" y="160" width="62" height="98"/>
+          <path class="dc-line" d="M862 153H936"/>
+          <path class="dc-lit" d="M888 200h22v16h-22z"/>
+          <path class="dc-soft" d="M888 170h22v16h-22z M888 228h22v16h-22z"/>
+
+          <!-- 植被：左侧小树（树冠 + 树干）、主楼窗台一丛小绿植、底部一排低矮草丛 -->
+          <path class="dc-line" d="M268 258V236"/>
+          <circle class="dc-line" cx="268" cy="216" r="20"/>
+          <path class="dc-veg" d="M840 258q2-12 7-16M848 258q1-11 6-14M856 258q-1-10 3-13"/>
+          <path class="dc-veg" d="M878 258q-2-11 2-14M886 258q0-10 4-12M894 258q-3-9 1-13M902 258q1-10 5-12M910 258q-2-9 2-13M918 258q0-9 3-11"/>
+        </svg>
+        <!-- 底层装饰：抽象校园「长排教学楼立面」线条插画（纯矢量内联 SVG，不含任何图片或外部资源）。
+             只在「上课中」状态显示，压在卡片最底层，配色由 css/style.css 的 .card-deco 一套变量控制。
+             尺寸沿用 .card-deco 的 height:38% + width:100%，preserveAspectRatio 用 slice（铺满）：
+             卡片越窄两侧被裁掉越多，中间「入口 + 两侧窗带」那一段始终保留 ——
+             所以手机上看到的是一条横贯卡片、两端伸出卡外的长楼，而不是缩成小小一条 -->
+        <svg class="card-deco card-deco-ongoing" viewBox="0 0 960 190" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
+          <!-- 远景：两端各一段更矮的附属楼（只有极淡块面、不描边，压在主楼后面） -->
+          <rect class="dc-ghost" x="8" y="110" width="70" height="48"/>
+          <rect class="dc-ghost" x="882" y="104" width="70" height="54"/>
+
+          <!-- 地面线 -->
+          <path class="dc-soft" d="M18 158H942"/>
+
+          <!-- 主楼三段：左翼 / 中段略高 / 右翼（浅块面 + 轮廓线），楼体高度约占卡片宽度的 14% -->
+          <rect class="dc-body" x="68" y="42" width="244" height="116"/>
+          <rect class="dc-body" x="312" y="26" width="336" height="132"/>
+          <rect class="dc-body" x="648" y="42" width="244" height="116"/>
+
+          <!-- 挑檐线：三段各一条，比楼体略宽出一小截 -->
+          <path class="dc-line" d="M60 42H320M304 26H656M640 42H900"/>
+
+          <!-- 两端翼楼外端的坡屋面 -->
+          <path class="dc-line" d="M68 42L86 26H162L180 42M780 42L798 26H874L892 42"/>
+
+          <!-- 左翼窗格：4 层 × 5 扇。夜里只留零星几扇亮着，分「较亮 / 微亮 / 关闭」三档 -->
+          <path class="dc-lit" d="M128 76h30v22h-30z M174 76h30v22h-30z M82 128h30v22h-30z"/>
+          <path class="dc-lit-dim" d="M220 50h30v22h-30z M220 76h30v22h-30z M266 102h30v22h-30z"/>
+          <path class="dc-soft" d="M82 50h30v22h-30z M128 50h30v22h-30z M174 50h30v22h-30z M266 50h30v22h-30z M82 76h30v22h-30z M266 76h30v22h-30z M82 102h30v22h-30z M128 102h30v22h-30z M174 102h30v22h-30z M220 102h30v22h-30z M128 128h30v22h-30z M174 128h30v22h-30z M220 128h30v22h-30z M266 128h30v22h-30z"/>
+
+          <!-- 右翼窗格：4 层 × 5 扇（与左翼镜像，同样只留零星几扇亮着） -->
+          <path class="dc-lit" d="M754 50h30v22h-30z M708 102h30v22h-30z M800 128h30v22h-30z"/>
+          <path class="dc-lit-dim" d="M846 76h30v22h-30z M662 102h30v22h-30z M754 128h30v22h-30z"/>
+          <path class="dc-soft" d="M662 50h30v22h-30z M708 50h30v22h-30z M800 50h30v22h-30z M846 50h30v22h-30z M662 76h30v22h-30z M708 76h30v22h-30z M754 76h30v22h-30z M800 76h30v22h-30z M754 102h30v22h-30z M800 102h30v22h-30z M846 102h30v22h-30z M662 128h30v22h-30z M708 128h30v22h-30z M846 128h30v22h-30z"/>
+
+          <!-- 中段窗格：入口两侧各一条宽窗带，4 层 × 2 扇（同样只留零星几扇亮着） -->
+          <path class="dc-lit" d="M322 94h40v26h-40z M540 34h40v26h-40z M598 64h40v26h-40z"/>
+          <path class="dc-lit-dim" d="M380 124h40v26h-40z M540 94h40v26h-40z"/>
+          <path class="dc-soft" d="M322 34h40v26h-40z M380 34h40v26h-40z M322 64h40v26h-40z M380 64h40v26h-40z M540 64h40v26h-40z M598 34h40v26h-40z M380 94h40v26h-40z M598 94h40v26h-40z M322 124h40v26h-40z M540 124h40v26h-40z M598 124h40v26h-40z"/>
+
+          <!-- 入口门厅：挑出的雨棚 + 两侧立柱 + 玻璃门（含竖梃）+ 门前台阶 -->
+          <path class="dc-line" d="M424 96H536M428 106H532M440 106V158M520 106V158"/>
+          <path class="dc-soft" d="M452 112h56v46h-56z M466 112V158M480 112V158M494 112V158 M444 152H516"/>
+
+          <!-- 植被：左侧细树（树干 + 树冠）、右侧小灌木、底部一整排草丛 -->
+          <path class="dc-line" d="M44 158V124"/>
+          <ellipse class="dc-line" cx="44" cy="104" rx="13" ry="24"/>
+          <path class="dc-veg" d="M916 158q-2-14 3-19M922 158q1-13 6-17M910 158q-3-12 0-17"/>
+          <path class="dc-veg" d="M24 158q2-16 7-21M32 158q1-15 6-19M40 158q-1-14 3-18 M100 158q2-16 7-21M108 158q1-15 6-19M116 158q-1-14 3-18 M176 158q2-16 7-21M184 158q1-15 6-19M192 158q-1-14 3-18 M252 158q2-16 7-21M260 158q1-15 6-19M268 158q-1-14 3-18 M328 158q2-16 7-21M336 158q1-15 6-19M344 158q-1-14 3-18 M404 158q2-16 7-21M412 158q1-15 6-19M420 158q-1-14 3-18 M480 158q2-16 7-21M488 158q1-15 6-19M496 158q-1-14 3-18 M556 158q2-16 7-21M564 158q1-15 6-19M572 158q-1-14 3-18 M632 158q2-16 7-21M640 158q1-15 6-19M648 158q-1-14 3-18 M708 158q2-16 7-21M716 158q1-15 6-19M724 158q-1-14 3-18 M784 158q2-16 7-21M792 158q1-15 6-19M800 158q-1-14 3-18 M860 158q2-16 7-21M868 158q1-15 6-19M876 158q-1-14 3-18 M924 158q2-16 7-21M932 158q1-15 6-19M940 158q-1-14 3-18"/>
+        </svg>
+        <!-- 底层装饰：开平碉楼 + 岭南榕树的侨乡水岸剪影（纯矢量内联 SVG，不含任何图片或外部资源）。
+             只在「较长假期」状态显示，压在卡片最底层；宽度按卡片宽度取比例、高度由 CSS 的
+             aspect-ratio 锁死成 viewBox 比例，所以手机 / 电脑都是等比缩放、绝不变形。
+             底边停在水面饰带的上沿，碉楼与榕树正好立在地平线上；
+             线条与植被的配色由 css/style.css 的 .is-holiday .card-deco 一套变量控制 -->
+        <!-- 造型要点（一眼认出是开平碉楼）：又高又瘦的平直楼体（近 1:2）、多道层间挑檐、
+             密排的窗格、顶层柱廊式券廊、屋顶两端「燕子窝」角堡 + 中央山花圆窗 -->
+        <svg class="card-deco card-deco-holiday-left" viewBox="0 0 461 420" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false">
+          <!-- 地面线：与卡片底部那层水面饰带的上沿重合 -->
+          <path class="dc-soft" d="M0 418H461"/>
+
+          <!-- 左侧：岭南大榕树（特征都点出来）——矮壮带板根的树干、一排垂到地面的气根、
+               宽而低的散冠，远看就是一棵压着水岸的老榕 -->
+          <path class="dc-line" d="M64 418C70 396 77 374 84 352M104 418C98 396 91 374 86 352"/>
+          <path class="dc-line" d="M58 406C48 409 40 413 34 418M110 406C120 409 128 413 134 418"/>
+          <path class="dc-line" d="M86 352L46 320M86 352L128 316M86 352L88 296"/>
+          <!-- 气根：榕树最标志性的特征，从枝干垂到地面，像挂了一排帘子 -->
+          <path class="dc-line" d="M46 320C42 350 39 384 38 418M128 316C132 348 135 382 136 418M58 336C55 364 53 392 52 418"/>
+          <path class="dc-soft" d="M112 330C114 360 115 390 116 418M30 332V356M68 300V320M108 300V318M142 324V346"/>
+          <ellipse class="dc-line" cx="86" cy="308" rx="54" ry="36"/>
+          <ellipse class="dc-line" cx="44" cy="320" rx="32" ry="24"/>
+          <ellipse class="dc-line" cx="132" cy="318" rx="32" ry="24"/>
+          <ellipse class="dc-line" cx="70" cy="274" rx="38" ry="25"/>
+          <ellipse class="dc-line" cx="120" cy="278" rx="32" ry="22"/>
+          <ellipse class="dc-soft" cx="86" cy="332" rx="40" ry="20"/>
+          <!-- 树下一丛灌木与草丛 -->
+          <path class="dc-veg" d="M156 418q-3-17 3-22M164 418q1-16 6-20M172 418q-2-14 2-19M180 418q1-13 5-17"/>
+
+          <!-- 碉楼主体：开平碉楼的命门是「又高又瘦、立面平直」——
+               楼体 148 宽 × 300 高，接近 1:2 的瘦高比例，一眼就不是普通教学楼 -->
+          <rect class="dc-body" x="250" y="118" width="148" height="300"/>
+          <!-- 三道层间挑檐线（两端各挑出 8），把楼体切成四段 -->
+          <path class="dc-line" d="M242 196H406M242 274H406M242 352H406"/>
+
+          <!-- 顶层：柱廊式券廊（碉楼最标志性的部分），三开间半圆券。
+               这三孔券挂 dc-lit：白天只是普通窗线，夜里整层点亮 -->
+          <path class="dc-lit" d="M263 196V166A18 18 0 0 1 299 166V196M306 196V166A18 18 0 0 1 342 166V196M349 196V166A18 18 0 0 1 385 166V196"/>
+          <!-- 券廊的额枋线 + 中间两根券脚 -->
+          <path class="dc-soft" d="M250 142H398M302 196V166M345 196V166"/>
+
+          <!-- 三、四层：每层两扇窗，每扇带竖梃 + 横档（窗格多层次重复，是碉楼的第二特征） -->
+          <path class="dc-lit" d="M264 212h44v46h-44z M286 212V258 M264 235H308 M340 212h44v46h-44z M362 212V258 M340 235H384"/>
+          <path class="dc-lit" d="M264 290h44v46h-44z M286 290V336 M264 313H308 M340 290h44v46h-44z M362 290V336 M340 313H384"/>
+
+          <!-- 底层：中间厚重的拱门洞（沿用细节线，不点亮） + 两侧小窗（dc-lit，夜间亮灯） -->
+          <path class="dc-soft" d="M308 418V382A16 16 0 0 1 340 382V418M324 382V418"/>
+          <path class="dc-lit" d="M270 376h22v28h-22z M281 376V404 M270 390H292 M356 376h22v28h-22z M367 376V404 M356 390H378"/>
+
+          <!-- 屋顶：挑檐线 + 女儿墙 + 两端「燕子窝」角堡（碉楼独有的出挑小角楼） -->
+          <rect class="dc-body" x="242" y="98" width="164" height="20"/>
+          <path class="dc-line" d="M242 98H406M228 118H420"/>
+          <path class="dc-line" d="M242 118V104A14 14 0 0 0 228 118M406 118V104A14 14 0 0 1 420 118"/>
+
+          <!-- 女儿墙中央的山花（半圆拱）+ 拱下圆窗（dc-lit，夜里是碉楼最高的一盏灯）+ 顶尖 -->
+          <path class="dc-line" d="M284 98A40 40 0 0 1 364 98"/>
+          <path class="dc-soft" d="M296 98A28 28 0 0 1 352 98"/>
+          <circle class="dc-lit" cx="324" cy="80" r="12"/>
+          <path class="dc-line" d="M324 58V44"/>
+          <circle class="dc-line" cx="324" cy="41" r="3"/>
+
+          <!-- 碉楼右侧的一丛草丛 -->
+          <path class="dc-veg" d="M410 418q2-16 7-20M418 418q1-15 6-18M426 418q-1-14 3-17M440 418q2-13 6-17M448 418q1-12 5-15"/>
+        </svg>
+        <!-- 底层装饰：江门骑楼 + 岭南大榕树的水岸剪影（纯矢量内联 SVG）。
+             与左幅同一套定位与配色规则，贴在卡片右下角；底边同样停在水面饰带的上沿。
+             造型要点（一眼认出是江门骑楼）：地面层是通透的连续券柱廊（骑楼的灵魂）、
+             上面两层窗带（下排方窗 + 上排拱窗）、竖向壁柱分间、屋顶女儿墙压三朵弧形山花 -->
+        <svg class="card-deco card-deco-holiday-right" viewBox="0 0 424 320" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false">
+          <!-- 地面线 -->
+          <path class="dc-soft" d="M0 318H424"/>
+
+          <!-- 先画右侧的大榕树（左下几团树冠会被骑楼挡住，形成前后层次）：
+               矮壮带板根的树干 + 一排垂到地面的气根 + 六团错落重叠的宽散冠 -->
+          <path class="dc-line" d="M358 318C364 292 368 262 372 234M386 318C380 292 376 262 372 234"/>
+          <path class="dc-line" d="M352 308C344 311 338 313 332 315M392 308C400 311 406 312 410 314"/>
+          <path class="dc-line" d="M372 234L344 200M372 234L400 198M372 234V176"/>
+          <path class="dc-line" d="M344 200C340 240 338 280 338 318M400 198C404 238 406 278 406 318"/>
+          <path class="dc-soft" d="M356 216C354 252 352 286 352 318M330 226V248M416 224V246"/>
+          <ellipse class="dc-line" cx="372" cy="170" rx="42" ry="28"/>
+          <ellipse class="dc-line" cx="340" cy="192" rx="32" ry="22"/>
+          <ellipse class="dc-line" cx="398" cy="186" rx="24" ry="21"/>
+          <ellipse class="dc-line" cx="356" cy="136" rx="34" ry="22"/>
+          <ellipse class="dc-line" cx="394" cy="142" rx="26" ry="19"/>
+          <ellipse class="dc-soft" cx="372" cy="204" rx="34" ry="20"/>
+
+          <!-- 骑楼主体：地面层留空做券柱廊（不画墙），上面两层才是楼体 -->
+          <rect class="dc-body" x="4" y="88" width="320" height="144"/>
+          <!-- 檐口线 与 层间腰线（腰线同时是券廊的天花板） -->
+          <path class="dc-line" d="M-2 88H330M-2 232H330"/>
+          <path class="dc-soft" d="M4 154H324"/>
+
+          <!-- 地面层：连续五连券（半圆券 + 粗券脚柱），每孔券顶再点一颗券心石 -->
+          <path class="dc-line" d="M11 318V258A25 25 0 0 1 61 258V318M75 318V258A25 25 0 0 1 125 258V318M139 318V258A25 25 0 0 1 189 258V318M203 318V258A25 25 0 0 1 253 258V318M267 318V258A25 25 0 0 1 317 258V318"/>
+          <path class="dc-soft" d="M68 318V232M132 318V232M196 318V232M260 318V232"/>
+          <path class="dc-soft" d="M65 318V240M71 318V240M129 318V240M135 318V240M193 318V240M199 318V240M257 318V240M263 318V240"/>
+          <path class="dc-soft" d="M33 227V235M97 227V235M161 227V235M225 227V235M289 227V235"/>
+
+          <!-- 二层：五扇方窗（与下面五孔券一一对齐，带竖梃与横档） -->
+          <path class="dc-soft" d="M19 170h34v44h-34z M36 170V214 M19 192H53 M83 170h34v44h-34z M100 170V214 M83 192H117 M147 170h34v44h-34z M164 170V214 M147 192H181 M211 170h34v44h-34z M228 170V214 M211 192H245 M275 170h34v44h-34z M292 170V214 M275 192H309"/>
+
+          <!-- 三层：五扇拱窗（拱顶呼应底层的券，是骑楼中西合璧的味道） -->
+          <path class="dc-soft" d="M19 146V132A17 17 0 0 1 53 132V146 M36 132V146 M19 139H53 M83 146V132A17 17 0 0 1 117 132V146 M100 132V146 M83 139H117 M147 146V132A17 17 0 0 1 181 132V146 M164 132V146 M147 139H181 M211 146V132A17 17 0 0 1 245 132V146 M228 132V146 M211 139H245 M275 146V132A17 17 0 0 1 309 132V146 M292 132V146 M275 139H309"/>
+
+          <!-- 立面上的竖向壁柱：把开间分开，撑住上下两层窗带 -->
+          <path class="dc-line" d="M68 88V232M132 88V232M196 88V232M260 88V232"/>
+
+          <!-- 屋顶：女儿墙 + 三朵弧形山花，每朵山花顶上再立一颗小尖顶 -->
+          <rect class="dc-body" x="4" y="72" width="320" height="16"/>
+          <path class="dc-line" d="M-2 72H330"/>
+          <path class="dc-line" d="M10 72A26 26 0 0 1 62 72M138 72A26 26 0 0 1 190 72M266 72A26 26 0 0 1 318 72"/>
+          <path class="dc-soft" d="M19 72A17 17 0 0 1 53 72M147 72A17 17 0 0 1 181 72M275 72A17 17 0 0 1 309 72"/>
+          <!-- 山花顶尖：一段小竖杆 + 顶上一颗小圆球 -->
+          <path class="dc-soft" d="M36 46V38M164 46V38M292 46V38"/>
+          <circle class="dc-soft" cx="36" cy="35" r="2.5"/>
+          <circle class="dc-soft" cx="164" cy="35" r="2.5"/>
+          <circle class="dc-soft" cx="292" cy="35" r="2.5"/>
+
+          <!-- 植被：榕树根部与骑楼之间的两丛草丛 -->
+          <path class="dc-veg" d="M330 318q2-13 6-17M338 318q1-12 5-15M346 318q-1-11 3-14"/>
+          <path class="dc-veg" d="M404 318q2-15 6-19M412 318q1-14 5-17"/>
+        </svg>
         <div class="card-content" id="cardContent">
           <!-- 小标题：图标 + 状态文案，随「待上课 / 上课中 / 较长假期」切换 -->
           <span class="status-badge">
