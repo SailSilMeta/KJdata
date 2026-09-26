@@ -33,11 +33,56 @@
   --stat-ongoing-line: rgba(16, 185, 129, .28);
   --stat-ongoing-soft: rgba(16, 185, 129, .09);
 
-  --stat-holiday-bg1: #fff7f7;                       /* 较长假期：极淡红渐变起点 */
-  --stat-holiday-bg2: #ffeceb;
   --stat-holiday-accent: #dd5257;
   --stat-holiday-line: rgba(221, 82, 87, .26);
   --stat-holiday-soft: rgba(221, 82, 87, .09);
+
+  /* 长假期卡片底层装饰（江门侨乡「碉楼 + 骑楼 + 古树」剪影，见 index.html 的 .card-deco-holiday-*）：
+     与其它两张插画共用同一套 dc-* 线型，这里只提供颜色。
+     配色跟着长假期卡片的淡红主色走：线条带一点暖紫红，植被偏橄榄绿，
+     整体只比卡片底色略深一点点，保证「非常淡、非常轻」 */
+  --deco-holiday-line: rgba(196, 140, 152, .30);
+  --deco-holiday-detail: rgba(196, 140, 152, .17);
+  --deco-holiday-fill: rgba(214, 164, 172, .08);
+  --deco-holiday-veg: rgba(140, 168, 132, .30);
+
+  /* 长假期卡片的「天空 + 水面」配色。
+     白天：淡粉天空 + 淡云 + 粉橘霞光 + 轻微水光底色（不放太阳）。
+     整套色相刻意锁在长假期卡片原有的「红 / 粉」家属里（不与 --stat-holiday-accent 的红色割裂），
+     只是比底色略深一点点，靠明度差拉开层次，不用冷蓝。
+     夜景在 html[data-theme="dark"] 里整体覆盖（见下方）。
+     全部以多层 background-image 渐变画在卡片上，不引入任何图片或外部资源 */
+  --holiday-sky-1: #f6d8e0;                     /* 天空顶部：淡玫瑰粉 */
+  --holiday-sky-2: #fdeef1;                     /* 天空中部：向暖白过渡 */
+  --holiday-sky-3: #fceee7;                     /* 天空近地平线：淡橘暖白 */
+  --holiday-glow: rgba(250, 176, 158, .46);     /* 地平线附近的粉橘霞光 */
+  --holiday-cloud: rgba(255, 250, 250, .88);    /* 淡云（带一点点暖） */
+  --holiday-horizon: rgba(198, 150, 162, .42);  /* 地平线（水天分界）细线 */
+  --holiday-water-1: rgba(240, 198, 208, .66);  /* 水面顶部：淡粉 */
+  --holiday-water-2: rgba(250, 226, 230, .85);  /* 水面底部 */
+  --holiday-reflect: rgba(255, 226, 198, .46);  /* 水面上的一抹横向暖光倒影 */
+  /* 水面饰带的高度：同时是两侧楼体 / 古树的落地基准线（它们的底边停在这条线上） */
+  --holiday-water-h: 13%;
+
+  /* 待上课卡片底层装饰（内联 SVG 线条教学楼 + 植被，见 index.html 的 .card-deco）：
+     line   = 楼体轮廓 / 挑檐线
+     detail = 窗格、门厅、地面线等细节线
+     fill   = 楼体浅块面
+     veg    = 植被（小树 / 窗台绿植 / 草丛）
+     楼体上方那条「天空带」白天是极淡彩虹（颜色直接写在 .is-pending::after 里），
+     夜间是星空 + 流星（取暗色主题里的 --deco-star / --deco-meteor） */
+  --deco-pending-line: rgba(122, 152, 186, .30);
+  --deco-pending-detail: rgba(122, 152, 186, .18);
+  --deco-pending-fill: rgba(122, 152, 186, .07);
+  --deco-pending-veg: rgba(104, 178, 142, .34);
+
+  /* 上课中卡片底层装饰（内联 SVG「长排教学楼立面」，见 index.html 的 .card-deco-ongoing）：
+     与待上课共用同一套 dc-* 线型，只把颜色换成偏向该卡片主色（科技绿）的一套，
+     同样线条比块面更实，保证楼体轮廓看得清、块面与草丛不抢文字 */
+  --deco-ongoing-line: rgba(94, 162, 132, .30);
+  --deco-ongoing-detail: rgba(94, 162, 132, .17);
+  --deco-ongoing-fill: rgba(94, 162, 132, .07);
+  --deco-ongoing-veg: rgba(104, 186, 138, .38);
 
   --toggle-bg: #ffffff;
   --toggle-border: #e2e8f0;
@@ -80,11 +125,61 @@ html[data-theme="dark"] {
   --stat-ongoing-line: rgba(52, 211, 153, .32);
   --stat-ongoing-soft: rgba(52, 211, 153, .14);
 
-  --stat-holiday-bg1: #2b1c1f;
-  --stat-holiday-bg2: #1c1214;
   --stat-holiday-accent: #f7a1a4;
   --stat-holiday-line: rgba(247, 161, 164, .30);
   --stat-holiday-soft: rgba(247, 161, 164, .14);
+
+  /* 长假期卡片底层装饰：夜间线条 20%、细节 12%，整体比日间再低一档，暗底上不刺眼 */
+  --deco-holiday-line: rgba(214, 192, 208, .20);
+  --deco-holiday-detail: rgba(214, 192, 208, .12);
+  --deco-holiday-fill: rgba(214, 192, 208, .06);
+  --deco-holiday-veg: rgba(150, 190, 168, .22);
+
+  /* 碉楼窗格「亮灯」：夜间把窗格描边换成暖黄、填一层半透明暖光并外发光，
+     让碉楼像是住了人、亮了灯 —— 夜景里唯一的亮点（白天这些窗格仍是普通细节线） */
+  --deco-holiday-lit: rgba(255, 208, 132, .66);
+  --deco-holiday-lit-fill: rgba(255, 198, 112, .22);
+  --deco-holiday-lit-glow: rgba(255, 182, 92, .48);
+
+  /* 待上课 / 上课中卡片：夜间教学楼「亮灯」用的暖光变量。
+     窗格本身只零星挂这几个类（大部分窗格夜间是完全关着的），并按两档给不同强度：
+       lit      = 较亮（还有人上课的那几间）
+       lit-dim  = 微亮（只在夜里留一盏小灯）
+     数值都压得比较低 —— 亮窗只是楼体内部的微弱暖点，
+     不能盖过楼体线条、更不能成为整幅插画的主体 */
+  --deco-lit: rgba(255, 204, 138, .26);
+  --deco-lit-fill: rgba(255, 196, 120, .04);
+  --deco-lit-glow: rgba(255, 184, 100, .12);
+  --deco-lit-dim: rgba(255, 204, 138, .12);
+  --deco-lit-dim-fill: rgba(255, 196, 120, .02);
+  --deco-lit-dim-glow: rgba(255, 184, 100, .05);
+
+  /* 长假期卡片的夜景：暖紫红夜空 + 少量星点 + 玫紫残霞 + 底部倒影光晕（不放月亮）。
+     与白天同样锁在「红 / 粉」色相里，暗版只是把明度压到深夜、饱和度略提，不用蓝。 */
+  --holiday-sky-1: #2b1a2e;                     /* 夜空顶部：深紫黑（带红） */
+  --holiday-sky-2: #3a2233;                     /* 夜空中部：暗红紫 */
+  --holiday-sky-3: #4a2a3a;                     /* 夜空近地平线：暖紫 */
+  --holiday-glow: rgba(196, 108, 140, .40);     /* 地平线附近的玫紫残霞 */
+  --holiday-star: rgba(255, 240, 246, .60);     /* 星点：暖白 */
+  --holiday-horizon: rgba(214, 160, 176, .28);
+  --holiday-water-1: rgba(92, 52, 70, .74);
+  --holiday-water-2: rgba(48, 26, 40, .92);
+  --holiday-reflect: rgba(255, 226, 232, .42);  /* 水面中央的一抹夜色倒影 */
+
+  /* 待上课卡片底层装饰：夜间整体再降一档，暗底上保持低对比、不刺眼 */
+  --deco-pending-line: rgba(150, 178, 212, .24);
+  --deco-pending-detail: rgba(150, 178, 212, .15);
+  --deco-pending-fill: rgba(150, 178, 212, .06);
+  --deco-pending-veg: rgba(120, 196, 158, .28);
+  /* 夜间天空：星点 与 流星的亮头 */
+  --deco-star: rgba(226, 236, 255, .55);
+  --deco-meteor: rgba(214, 230, 255, .50);
+
+  /* 上课中卡片底层装饰：夜间同样降一档，暗绿底上保持低对比 */
+  --deco-ongoing-line: rgba(140, 200, 172, .24);
+  --deco-ongoing-detail: rgba(140, 200, 172, .14);
+  --deco-ongoing-fill: rgba(140, 200, 172, .06);
+  --deco-ongoing-veg: rgba(120, 200, 158, .30);
 
   --toggle-bg: #1e293b;
   --toggle-border: #334155;
@@ -122,8 +217,15 @@ body {
   background-image: radial-gradient(circle at 50% 0%, var(--page-bg-center) 0%, var(--page-bg-edge) 70%);
   /* 注意：不要用 background-attachment: fixed，移动端会禁用部分合成优化并强制重绘整个渐变。
      页面本身不滚动（overflow: hidden），无需 fixed 也能铺满视口。 */
-  /* 主题切换平滑过渡 */
-  transition: background-color .45s ease, color .45s ease;
+  /* 主题切换平滑过渡。
+     ⚠ 这里【不要】给 color 加过渡 —— color 是继承属性，在 body 上挂一条 0.45 秒的
+     颜色过渡，等于那 0.45 秒里整棵子树每一帧都被标成「继承色变了」并逐帧重绘。
+     长假期卡片底下压着整片天空渐变（多层 background 渐变）、水面和 62 个 SVG 元素，
+     被这么逐帧重绘一次就是「切主题时一顿一顿」的来源。
+     卡片文字的淡入淡出本来就由各自的容器自己驱动（见 .course-card 的 color 过渡），
+     不依赖 body 这一条；
+     而背景色是传播到 canvas 上的，本来就看不到过渡，留着只是保持声明完整。 */
+  transition: background-color .45s ease;
   overflow: hidden; /* 手机竖屏一屏展示，不滚动 */
   -webkit-font-smoothing: antialiased;
 }
@@ -169,7 +271,10 @@ body {
   font-size: clamp(20px, 5.5vw, 24px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  transition: color .45s ease;
+  /* 实时时钟（14:07:43）的颜色也瞬切，不加 color 过渡：
+     color 是继承属性，过渡期间每一帧都要给这个每秒都在重绘的元素再算一遍、再重绘一遍，
+     切主题时就会顿。它本身没有自己的 color，去掉这条后直接继承 body 当前的颜色，
+     切换是瞬时的；秒数照常每秒刷新。 */
 }
 
 /* 右上角主题切换按钮 */
@@ -184,7 +289,9 @@ body {
   line-height: 1;
   cursor: pointer;
   box-shadow: 0 2px 10px rgba(15, 23, 42, .10);
-  transition: background-color .45s ease, border-color .45s ease, transform .2s ease;
+  /* 背景色 / 边框色也瞬切，不参与主题过渡（同理：不可合成，只能逐帧重绘）；
+     只保留按下时的缩放反馈（transform 走合成层，是便宜的） */
+  transition: transform .2s ease;
 }
 
 .theme-toggle:active {
@@ -202,6 +309,8 @@ body {
 
 /* ---------- 课程卡片 ---------- */
 .course-card {
+  position: relative; /* 作为底层装饰伪元素的定位基准 */
+  overflow: hidden;   /* 裁掉超出卡片圆角的装饰，避免溢出到卡片外 */
   width: 100%;
   border-radius: 20px;
   border: 1px solid var(--card-border);
@@ -209,7 +318,12 @@ body {
   box-shadow: var(--card-shadow);
   padding: clamp(20px, 6vw, 36px) clamp(18px, 5vw, 32px);
   text-align: center;
-  transition: background-color .4s ease, color .4s ease,
+  /* 主题切换的过渡：背景色 / 边框色 / 阴影，三张卡片行为一致。
+     ⚠ 这里【没有】color —— color 是继承属性，一旦挂上过渡，卡片里所有文字
+     都要在那 0.4 秒里逐帧重算 + 逐帧重绘，而卡片底下还压着几十个 SVG 装饰元素，
+     正是「切主题时文字变色卡顿」的来源。所以三张卡片的文字颜色都改成瞬切，
+     跟卡片底色 / 装饰一起「啪」地换过去，反而更同步、更省。 */
+  transition: background-color .4s ease,
     border-color .4s ease, box-shadow .4s ease;
 }
 
@@ -233,14 +347,364 @@ body {
   border-color: var(--stat-ongoing-line);
 }
 
-/* 较长假期（间隔 > 48 小时）：极淡红渐变 + 细红边框 */
+/* 较长假期（间隔 > 48 小时）：白天是「侨乡晴空」——淡粉天空 + 淡云 + 粉橘霞光，
+   整片天色都锁在卡片本身的红 / 粉色相里（不用冷蓝），所以背景与红色 accent 不会割裂；
+   夜间整层覆盖成暖紫红夜空 + 星点（见下一条），日月都不画。
+   卡片主色仍是 --stat-holiday-*（小标题胶囊、底部小字取色），三态配色体系不变。 */
 .course-card.is-holiday {
   --card-accent: var(--stat-holiday-accent);
   --card-accent-soft: var(--stat-holiday-soft);
   --card-accent-line: var(--stat-holiday-line);
-  background-color: var(--stat-holiday-bg2);
-  background-image: linear-gradient(155deg, var(--stat-holiday-bg1) 0%, var(--stat-holiday-bg2) 100%);
   border-color: var(--stat-holiday-line);
+  /* 天空不再铺在卡片自身的背景上，而是挪进 ::before（见下）；卡片自身的过渡只留边框色，
+     绝不给 color 加过渡（color 是继承属性，一挂上，整棵子树那 0.4 秒里就要逐帧重算 + 逐帧重绘，
+     而这张卡带着 62 个 SVG 元素、多层天空渐变，重绘量最大 —— 这正是「切主题文字变色卡顿」的来源）。
+     同时去掉了通用卡片上的 background-color 与 box-shadow 过渡：两者都不可合成、
+     只能逐帧重绘整张卡片以及它外围那圈 32px 模糊阴影，而视觉上看不出差别
+     （天空由不参与过渡的渐变图决定，阴影深浅的变化也看不出来）。 */
+  background-color: transparent;
+  background-image: none;
+  transition: border-color .4s ease;
+}
+
+/* 天空层：整张卡片的底色 + 天空渐变。
+   ⚠ 这里刻意【不】加 will-change：它铺满整张卡片，在 3 倍屏手机上单独成层
+   就要十几 MB 显存，切主题时还要整层重新光栅化 + 重新上传 —— 而长假期卡片
+   原本有四个这样的铺满卡片的层（天空 / 水面 / 两张插画），叠起来正是
+   「切换主题时顿一下」的主要来源。现在天空与水面都退回到卡片自身的绘制层里
+   （跟着卡片一起重绘一次即可），只有两张插画仍各自独立成层
+   （面积小得多，而且被文字盖住，独立成层避免文字逐帧变色时把它们一起重绘）。
+   为了让「跟着卡片一起重绘」足够便宜，下面每团淡云都改成
+   「百分比小盒子 + closest-side」来画：盒子内最大的内切椭圆正好等于原来的椭圆半径，
+   所以形状、位置都看不出区别，但每层只光栅化自己那一小块，不再各铺满整张卡片。 */
+.course-card.is-holiday::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;                     /* 位于插画与文字之下 */
+  pointer-events: none;           /* 装饰不拦截任何触摸/点击 */
+  /* 由上到下：三团淡云 → 地平线附近的粉橘霞光 → 天空底色（不放太阳，只靠霞光表达晴天的暖）。
+     淡云的 background-position 是反推出来的：让云团小盒子的中心正好落在
+     原来那团云 at 64% 14% / 74% 23% / 50% 9% 的百分比位置上。 */
+  background:
+    radial-gradient(closest-side, var(--holiday-cloud) 0%, transparent 100%) 85% 10% / 60% 10% no-repeat,
+    radial-gradient(closest-side, var(--holiday-cloud) 0%, transparent 100%) 96.2% 20.7% / 48% 8% no-repeat,
+    radial-gradient(closest-side, var(--holiday-cloud) 0%, transparent 100%) 50% 6.2% / 38% 6.4% no-repeat,
+    radial-gradient(120% 32% at 50% 78%, var(--holiday-glow) 0%, transparent 100%),
+    linear-gradient(to bottom, var(--holiday-sky-1) 0%, var(--holiday-sky-2) 58%, var(--holiday-sky-3) 100%) 0 0 / 100% 100% no-repeat var(--holiday-sky-2);
+}
+
+/* 夜间：同一张卡片整层换成暖紫红夜空 —— 少量星点 + 玫紫残霞，并压暗底色
+   （不放月亮；夜里的亮点交给碉楼那排亮着的窗，见下面的 .dc-lit）
+   六颗星原先是六层「铺满整张卡片」的径向渐变 —— 每颗星都把整张卡填一遍，
+   切主题时白白重新光栅化六整张卡。现在每颗星只占一个 18% × 8% 的小盒子、
+   星点画在盒子正中（at 50% 50%），box 的位置百分比反推自原来的星点坐标，
+   看上去一模一样，光栅化面积却只剩原来的几十分之一。 */
+html[data-theme="dark"] .course-card.is-holiday::before {
+  background:
+    radial-gradient(circle 1.5px at 50% 50%, var(--holiday-star) 0 100%, transparent 100%) 15.9% 8.7% / 18% 8% no-repeat,
+    radial-gradient(circle 1.1px at 50% 50%, var(--holiday-star) 0 100%, transparent 100%) 35.4% 25% / 18% 8% no-repeat,
+    radial-gradient(circle 1.6px at 50% 50%, var(--holiday-star) 0 100%, transparent 100%) 57.3% 4.3% / 18% 8% no-repeat,
+    radial-gradient(circle 1.1px at 50% 50%, var(--holiday-star) 0 100%, transparent 100%) 72% 30.4% / 18% 8% no-repeat,
+    radial-gradient(circle 1.3px at 50% 50%, var(--holiday-star) 0 100%, transparent 100%) 3.7% 31.5% / 18% 8% no-repeat,
+    radial-gradient(circle 1px at 50% 50%, var(--holiday-star) 0 100%, transparent 100%) 100% 40.2% / 18% 8% no-repeat,
+    radial-gradient(120% 32% at 46% 79%, var(--holiday-glow) 0%, transparent 100%),
+    linear-gradient(to bottom, var(--holiday-sky-1) 0%, var(--holiday-sky-2) 56%, var(--holiday-sky-3) 100%) 0 0 / 100% 100% no-repeat var(--holiday-sky-2);
+}
+
+/* ---------- 较长假期卡片的底层装饰：江门侨乡「碉楼 + 骑楼 + 古树」水岸长卷 ----------
+   整幅画由三层拼成，全部是纯 CSS 渐变与内联 SVG，不含任何图片或外部资源：
+     ① 卡片自身的 ::before —— 整张卡片的天空（白天淡粉晴空 + 淡云 + 粉橘霞光，
+        夜间暖紫红夜空 + 星点，见上面 html[data-theme="dark"] 的覆盖）；
+        两套天色都锁在卡片原有的红 / 粉色相里，避免背景与红色 accent 割裂；
+     ② 这里的 ::after —— 卡片底部那条「水面」：地平线细线 + 水色渐变 + 中央一抹倒影光晕；
+     ③ index.html 里的两张内联 SVG —— 左边「古树 + 碉楼」、右边「骑楼 + 大榕树」，
+        用 .card-deco 的 dc-* 线型描边，颜色取 --deco-holiday-* 一套（见下方）。
+   三层都压在文字之下（z-index 0/1），中间留出大片空白给课程名称与教室。
+   与天空层同理，① ② 都不加 will-change：它们面积大、又都要跟着主题换色，
+   独立成层只会白占显存、并在切主题时多出两次整层重绘 + 上传；
+   只有 ③ 那两张插画保留独立合成层（见 .card-deco）。 */
+.course-card.is-holiday::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--holiday-water-h);  /* 水面高度，同时是两侧楼体 / 古树的落地基准线 */
+  z-index: 0;                      /* 位于天空之上、插画与文字之下 */
+  pointer-events: none;            /* 装饰不拦截任何触摸/点击 */
+  border-top: 1px solid var(--holiday-horizon);  /* 地平线：水与天的分界 */
+  /* 先叠一抹横向倒影光晕（白天偏暖、夜间偏冷白），再铺水色渐变 */
+  background-image:
+    radial-gradient(46% 64% at 46% 6%, var(--holiday-reflect) 0%, transparent 100%),
+    linear-gradient(to bottom, var(--holiday-water-1) 0%, var(--holiday-water-2) 100%);
+}
+
+/* 卡片内容整体上移到装饰之上 */
+.is-holiday .card-content,
+.is-pending .card-content,
+.is-ongoing .card-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* 长假期卡片的文字颜色【瞬切】，不做 0.4 秒渐变。
+   两个原因：
+     ① 这张卡片的天空、水面、两张插画本来就是瞬切的（渐变图没法补间），
+        只有文字单独慢慢淡 0.4 秒，看上去反而不同步；
+     ② 更要紧的是性能：color 过渡会让这棵子树在 0.4 秒里逐帧重算 + 逐帧重绘，
+        而这张卡底下压着整片天空渐变和 62 个 SVG 元素，逐帧重绘量远超另外两张卡片 ——
+        这正是「切主题时文字变色一顿一顿」的来源。
+   颜色取值仍是 --text-main（与卡片原来的文字色一致），所以颜色本身没有变化。 */
+.is-holiday .card-content {
+  color: var(--text-main);
+}
+
+/* ---------- 待上课卡片的底层装饰：抽象校园「教学楼 + 植被」线条插画 ----------
+   插画本体是 index.html 里的一段内联 SVG（纯矢量，不含图片与外部资源），
+   这里只负责它的位置、显隐与配色：
+     · 只在「待上课」状态显示，压在卡片最底层（z-index: 0），
+       课程名、教室、倒计时等内容层在其上（见 .is-pending .card-content）；
+     · 只占卡片下半部分，且靠右下对齐，避免侵入上方文字区；
+     · 线条颜色全部走主题变量，夜间自动降一档，保持低对比、不抢文字。 */
+.card-deco {
+  display: none;               /* 默认不显示，由各状态类打开（见下面两处 .is-* 规则） */
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  /* 装饰带高度按卡片高度的比例给：宽屏下约等于插画原始比例（几乎不裁），
+     窄屏手机上卡片更瘦长，插画就按这条带子的高度铺满、只裁掉左边的天空，
+     这样手机上教学楼不会缩成小小一条（SVG 的 preserveAspectRatio 用的是 slice） */
+  height: 38%;
+  z-index: 1;                  /* 高于天空带（::after 为 0），低于内容层 */
+  pointer-events: none;        /* 装饰不拦截任何触摸/点击 */
+  /* 插画整体提升为独立合成层：插画有几十个元素（长假期那张的亮窗还带发光滤镜），
+     如果和卡片文字同处一层，切换主题时文字每帧变色都会把这层装饰一起重新光栅化，
+     长假期卡片上就表现为「文字变色卡顿」。独立成层后只重绘文字本身 */
+  will-change: transform;
+
+  /* 插画用色：默认走「待上课」的蓝灰一套。
+     上课中卡片会把这四个变量整体换成偏向该卡主色（科技绿）的一套（见下一条规则），
+     这样两段 SVG 能共用同一组 dc-* 线型，不必为每种状态各写一份样式 */
+  --deco-ink-line: var(--deco-pending-line);
+  --deco-ink-detail: var(--deco-pending-detail);
+  --deco-ink-fill: var(--deco-pending-fill);
+  --deco-ink-veg: var(--deco-pending-veg);
+}
+
+/* 只在待上课状态打开上面那张插画。
+   注意必须点名 .card-deco-pending：.card-deco 是所有插画共用的基础类
+   （上课中那张也带），若只写 .is-pending .card-deco 会把两张插画同时显示出来、叠在一起 */
+.is-pending .card-deco-pending {
+  display: block;
+}
+
+/* 上课中卡片：插画用色整体换成偏向科技绿的一套 */
+.is-ongoing .card-deco {
+  --deco-ink-line: var(--deco-ongoing-line);
+  --deco-ink-detail: var(--deco-ongoing-detail);
+  --deco-ink-fill: var(--deco-ongoing-fill);
+  --deco-ink-veg: var(--deco-ongoing-veg);
+}
+
+/* SVG 内部默认不填充不描边，具体样式由元素上的 dc-* 类决定；
+   non-scaling-stroke 保证线条在缩放后仍是 1px 细线 */
+.card-deco * {
+  fill: none;
+  stroke: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.card-deco .dc-body {          /* 楼体：浅块面 + 轮廓线 */
+  fill: var(--deco-ink-fill);
+  stroke: var(--deco-ink-line);
+  stroke-width: 1;
+}
+
+.card-deco .dc-ghost {         /* 远景附属楼：只有极淡块面，不描边 */
+  fill: var(--deco-ink-fill);
+}
+
+.card-deco .dc-line {          /* 挑檐线、坡屋面、树干等主要线条 */
+  stroke: var(--deco-ink-line);
+  stroke-width: 1;
+}
+
+.card-deco .dc-soft {          /* 窗格、门厅、地面线等细节线条 */
+  stroke: var(--deco-ink-detail);
+  stroke-width: 1;
+}
+
+.card-deco .dc-veg {           /* 植被：小树 / 窗台绿植 / 草丛 */
+  stroke: var(--deco-ink-veg);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+/* 亮灯窗格：白天与其它细节线同色（看不出区别）；
+   夜间由下面几条规则点成暖黄灯光 —— 三张插画的窗格都挂了 dc-lit。
+   dc-lit      = 较亮的那几扇（有人上课的教室）
+   dc-lit-dim  = 微亮的那几扇（只留一盏小灯）
+   两张教学楼的插画里，其余窗格仍用 dc-soft：白天同样是一条窗线，
+   夜间则完全关着 —— 于是亮着的只是零星几点，不会变成一整面发光的窗墙 */
+.card-deco .dc-lit,
+.card-deco .dc-lit-dim {
+  stroke: var(--deco-ink-detail);
+  stroke-width: 1;
+}
+
+/* 夜间碉楼亮灯：窗格描边换成暖黄、填一层半透明暖光，再叠一圈外发光，
+   远看就是「整栋楼亮了灯」；这是夜景里唯一的亮点，骑楼与古树保持暗剪影做陪衬 */
+html[data-theme="dark"] .card-deco-holiday-left .dc-lit {
+  stroke: var(--deco-holiday-lit);
+  fill: var(--deco-holiday-lit-fill);
+  filter: drop-shadow(0 0 2px var(--deco-holiday-lit-glow));
+}
+
+/* 夜间亮灯：待上课的「教学楼」与上课中的「长排教学楼」，
+   只把零星挂过 dc-lit / dc-lit-dim 的窗格点成暖黄，分成较亮、微亮两档。
+   楼体线条本身仍是暗的，亮窗只是楼里的微弱细节，
+   一眼看去是「晚上还有几间教室开着灯」，而不是整栋楼均匀发光 */
+html[data-theme="dark"] .card-deco-pending .dc-lit,
+html[data-theme="dark"] .card-deco-ongoing .dc-lit {
+  stroke: var(--deco-lit);
+  fill: var(--deco-lit-fill);
+  filter: drop-shadow(0 0 2px var(--deco-lit-glow));
+}
+
+/* 微亮档：亮度约为亮档的一半，只有一点点暖意 */
+html[data-theme="dark"] .card-deco-pending .dc-lit-dim,
+html[data-theme="dark"] .card-deco-ongoing .dc-lit-dim {
+  stroke: var(--deco-lit-dim);
+  fill: var(--deco-lit-dim-fill);
+  filter: drop-shadow(0 0 2px var(--deco-lit-dim-glow));
+}
+
+/* ---------- 上课中卡片的底层装饰：横贯整卡的长排教学楼立面 ----------
+   插画本体同样是 index.html 里的一段内联 SVG（.card-deco-ongoing）。
+   尺寸与位置这里不再单独写：它直接沿用 .card-deco 的「height: 38% + width: 100%」，
+   也就是与待上课那张同一套缩放方式 —— 装饰带占卡片底部 38% 高、宽度铺满卡片，
+   再靠 SVG 自己的 preserveAspectRatio="xMidYMax slice" 按带子铺满、底部对齐、多余部分裁掉。
+
+   效果：卡片越高插画越大（手机上比「按宽度等比缩放」饱满得多），
+   卡片越窄则左右裁掉越多，而中间「入口雨棚 + 两侧窗带」那一段始终保留，
+   看起来就是一条横贯卡片、两端伸出卡外的长楼。
+   插画顶部特意留了约 26 单位空白天空：万一卡片很矮、需要从上下裁一点，
+   裁掉的也只是天空，楼顶不会被削平。 */
+.is-ongoing .card-deco-ongoing {
+  display: block;
+}
+
+/* ---------- 长假期卡片的底层装饰：左侧「古树 + 碉楼」、右侧「骑楼 + 大榕树」 ----------
+   两幅插画本体同样是 index.html 里两段内联 SVG（.card-deco-holiday-left / -right）。
+
+   ⚠ 手机适配（与拱门那次同一个坑）：插画的宽度按「卡片宽度的百分比」取，
+   高度则用 aspect-ratio 锁死成 viewBox 的比例（height: auto），
+   于是任何屏宽下都等比缩放、绝不变形 —— 不会再出现两个百分比挂在不同维度上、
+   盒子被窄长卡片拉变形的情况。
+   底边统一停在 --holiday-water-h（水面饰带上沿），楼体的地面线正好落在地平线上，
+   看上去就像立在水岸边；两幅插画之间留出约 14% 宽的空档，那是留给课程名的留白。 */
+.card-deco-holiday-left {
+  left: 0;
+  right: auto;
+  bottom: var(--holiday-water-h);
+  width: 45%;
+  height: auto;
+  aspect-ratio: 461 / 420;
+}
+
+.card-deco-holiday-right {
+  left: auto;
+  right: 0;
+  bottom: var(--holiday-water-h);
+  width: 41%;
+  height: auto;
+  aspect-ratio: 424 / 320;
+}
+
+/* 长假期卡片：插画用色整体换成「侨乡暮色」的一套（暖紫红线条 + 橄榄绿植被） */
+.is-holiday .card-deco {
+  --deco-ink-line: var(--deco-holiday-line);
+  --deco-ink-detail: var(--deco-holiday-detail);
+  --deco-ink-fill: var(--deco-holiday-fill);
+  --deco-ink-veg: var(--deco-holiday-veg);
+}
+
+/* 只在长假期状态显示这两幅插画。
+   同样必须点名 .card-deco-holiday-*：.card-deco 是三张插画共用的基础类，
+   若写成 .is-holiday .card-deco 会把三张插画同时打开、叠在一起 */
+.is-holiday .card-deco-holiday-left,
+.is-holiday .card-deco-holiday-right {
+  display: block;
+}
+
+/* 窄屏（安卓竖屏）再补一档：手机卡片接近正方形（电脑端宽高比约 1.4），
+   若仍按同样的宽度百分比取宽度，楼体在竖直方向只占很小一段、会显得又小又空。
+   这里把两幅插画整体放大，让碉楼 / 骑楼依然从水面「长」到接近半张卡片高，
+   同时保留约 6% 的中间空档（这些线条极淡，靠得很近也不会糊在一起）。 */
+@media (max-width: 520px) {
+  .card-deco-holiday-left {
+    width: 52%;
+  }
+
+  .card-deco-holiday-right {
+    width: 48%;
+  }
+}
+
+/* ---------- 待上课卡片的「天空带」：白天极淡彩虹，夜间星空 + 流星 ----------
+   纯 CSS 渐变实现，铺在楼体上方的那一条天空里，压在卡片最底层；
+   日间彩虹极淡、夜间星点很小，都不与文字抢注意力。 */
+.course-card.is-pending::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  /* 彩虹半径跟着视口宽度缩放：宽屏封顶 96px（与原设计一致），
+     手机上（约 390px 宽）自动降到 52px 左右——
+     手机卡片更窄，若仍用 96px 圆弧会占掉大半个卡片、显得很突兀 */
+  --rainbow-r: clamp(52px, 12.5vw, 96px);
+  left: 0;
+  right: 0;
+  bottom: 30%;
+  /* 盒子高度取「半径 × 1.05」，圆心压在盒子下方 4%：
+     弧顶刚好落在盒子内，不会像按卡片高度取百分比那样在窄屏被盒子顶边切平 */
+  height: calc(var(--rainbow-r) * 1.05);
+  /* 日间：小半径的圆心压在带子下方，只露出同心圆弧的上缘——
+     一道很小、很远、偏左侧的淡彩虹；色带位置都用半径的百分比表示，
+     整道弧会跟着半径一起缩放；底部再用遮罩淡出，
+     弧线末端自然消失在天空里，不会出现生硬的截断边 */
+  background: radial-gradient(circle var(--rainbow-r) at 32% 104%,
+      transparent 0 75%,
+      rgba(255, 138, 138, .26) 75% 79.2%,
+      rgba(255, 186, 120, .26) 79.2% 83.3%,
+      rgba(252, 226, 126, .24) 83.3% 87.5%,
+      rgba(140, 216, 158, .24) 87.5% 91.7%,
+      rgba(126, 190, 246, .24) 91.7% 95.8%,
+      rgba(178, 158, 232, .22) 95.8% 100%,
+      transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, transparent 0, #000 34%);
+  mask-image: linear-gradient(to top, transparent 0, #000 34%);
+}
+
+/* 夜间：星空要铺满楼体上方整条天空带，所以盒子尺寸与遮罩在这里单独覆盖回去 */
+html[data-theme="dark"] .course-card.is-pending::after {
+  left: 2%;
+  right: 2%;
+  bottom: 20%;
+  height: 36%;
+  -webkit-mask-image: none;
+  mask-image: none;
+  background:
+    /* 流星：左端淡出、右端是亮头的斜向细线 */
+    linear-gradient(100deg, transparent 0, var(--deco-meteor) 78%, var(--deco-meteor) 100%) 72% 22% / 92px 2px no-repeat,
+    linear-gradient(100deg, transparent 0, var(--deco-meteor) 80%, var(--deco-meteor) 100%) 24% 64% / 58px 2px no-repeat,
+    /* 星点：四层不同间距、不同大小的点阵，错开后即是一片散落的星空 */
+    radial-gradient(circle 1.6px at 12px 10px, var(--deco-star) 0 100%, transparent 100%) 0 0 / 73px 57px repeat,
+    radial-gradient(circle 1.1px at 40px 30px, var(--deco-star) 0 100%, transparent 100%) 17px 11px / 91px 67px repeat,
+    radial-gradient(circle 1.4px at 56px 6px, var(--deco-star) 0 100%, transparent 100%) 6px 25px / 113px 79px repeat,
+    radial-gradient(circle 1px at 22px 44px, var(--deco-star) 0 100%, transparent 100%) 33px 41px / 97px 71px repeat;
 }
 
 .card-content {
