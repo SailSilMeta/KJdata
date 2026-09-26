@@ -267,6 +267,13 @@ body {
   letter-spacing: .02em;
 }
 
+/* 日期后面接的「节假日 / 24 节气」文字：
+   字号与日期一致，颜色比日期略深一点以便一眼看到今天是假期还是节气；
+   与其它文字元素一样不加 color 过渡，切换日/夜主题时瞬切，避免整块重绘 */
+.festival-text {
+  color: var(--text-main);
+}
+
 .clock {
   font-size: clamp(20px, 5.5vw, 24px);
   font-weight: 700;

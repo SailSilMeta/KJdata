@@ -46,6 +46,7 @@ let currentKey = null;   // 当前展示课程的唯一标识，用于避免每�
 let lastNumText = '';    // 上一次倒计时数字，用于触发数字变化动画
 let loadError = '';      // 接口失败原因（非空时在卡片上提示，但不丢弃上一次成功的数据）
 let isLoading = true;    // 首次数据是否仍在加载中
+let lastFestivalText = ''; // 上一次顶部栏的节假日 / 节气文字，只有变化时才写 DOM
 
 // ============================================================
 // DOM 引用
@@ -53,6 +54,7 @@ let isLoading = true;    // 首次数据是否仍在加载中
 const $ = (id) => document.getElementById(id);
 const dom = {
   dateText: $('dateText'),
+  festivalText: $('festivalText'),
   clock: $('clock'),
   themeToggle: $('themeToggle'),
   courseCard: $('courseCard'),
@@ -84,10 +86,119 @@ function pad2(n) {
   return String(n).padStart(2, '0');
 }
 
-/** 顶部信息栏：日期 + 中文星期 + 实时时钟 */
+// ============================================================
+// 节假日 / 24 节气（顶部栏「XXXX年X月X日 星期X」后面追加的文字）
+// ============================================================
+
+// 【法定节假日】数据来源：国务院办公厅关于节假日安排的通知。
+// 每年国务院公布一次，公布后按同样格式往后追加一年即可，平时不需要改动。
+// 格式：[开始日, 结束日, 名称]，日期用 "MM-DD"，起止之间的每一天都算在假期内。
+const HOLIDAY_RANGES = {
+  // 2026 年：国办发明电〔2025〕7 号（2025-11-04 发布）
+  2026: [
+    ['01-01', '01-03', '元旦'],
+    ['02-15', '02-23', '春节'],
+    ['04-04', '04-06', '清明节'],
+    ['05-01', '05-05', '劳动节'],
+    ['06-19', '06-21', '端午节'],
+    ['09-25', '09-27', '中秋节'],
+    ['10-01', '10-07', '国庆节']
+  ]
+};
+
+// 【24 节气】用「寿星公式」按年份算，不依赖任何数据表：
+//   日期 = floor(年份后两位 × 0.2422 + C) - floor(年份后两位 ÷ 4)
+// 每两个节气落在同一个公历月（1 月＝小寒/大寒，2 月＝立春/雨水 …… 12 月＝大雪/冬至），
+// 所以下标 i 的节气所在月份 = floor(i / 2) + 1。
+const SOLAR_TERMS = [
+  ['小寒', 5.4055], ['大寒', 20.12],  ['立春', 3.87],   ['雨水', 18.73],
+  ['惊蛰', 5.63],   ['春分', 20.646], ['清明', 4.81],   ['谷雨', 20.1],
+  ['立夏', 5.52],   ['小满', 21.04],  ['芒种', 5.678],  ['夏至', 21.37],
+  ['小暑', 7.108],  ['大暑', 22.83],  ['立秋', 7.5],    ['处暑', 23.13],
+  ['白露', 7.646],  ['秋分', 23.042], ['寒露', 8.318],  ['霜降', 23.438],
+  ['立冬', 7.438],  ['小雪', 22.36],  ['大雪', 7.18],   ['冬至', 22.6]
+];
+
+// 公式在个别年份会差 1 天（节气时刻正好压在零点前后时），按天文台公布的日期修正：
+// 键为「节气名-年份」，值为在公式结果上加减的天数。
+const SOLAR_TERM_FIX = {
+  '雨水-2026': -1,  // 2026 年雨水实为 2 月 18 日
+  '冬至-2027': -1   // 2027 年冬至实为 12 月 22 日
+};
+
+/** 算出某年第 i 个节气的公历日期，返回 { month, day } */
+function solarTermDay(year, i) {
+  const y = year % 100; // 年份后两位
+  let day = Math.floor(y * 0.2422 + SOLAR_TERMS[i][1]) - Math.floor(y / 4);
+  day += SOLAR_TERM_FIX[`${SOLAR_TERMS[i][0]}-${year}`] || 0;
+  return { month: Math.floor(i / 2) + 1, day };
+}
+
+/** 这一天是哪个节气，不是节气则返回 '' */
+function solarTermOf(date) {
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  for (let i = 0; i < SOLAR_TERMS.length; i++) {
+    const t = solarTermDay(date.getFullYear(), i);
+    if (t.month === month && t.day === day) return SOLAR_TERMS[i][0];
+  }
+  return '';
+}
+
+/** 这一天处在哪个法定假期内，不在假期则返回 '' */
+function holidayOf(date) {
+  const list = HOLIDAY_RANGES[date.getFullYear()] || [];
+  const key = `${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`; // 同一年内 "MM-DD" 可直接比大小
+  for (const [start, end, name] of list) {
+    if (key >= start && key <= end) return name;
+  }
+  return '';
+}
+
+/** 今天既不是假期也不是节气时，往后找最近的一个（最多找 60 天）作为预告 */
+function findNextFestival(date) {
+  for (let i = 1; i <= 60; i++) {
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate() + i);
+    const name = holidayOf(d) || solarTermOf(d);
+    if (name) return { name, days: i };
+  }
+  return null;
+}
+
+/** 组装要显示的文字：今天命中就显示今天，否则显示最近的一个（如「距国庆节 5天」） */
+function buildFestivalText(now) {
+  const holiday = holidayOf(now);
+  const term = solarTermOf(now);
+  if (holiday && term) {
+    // 清明这类「节日当天恰好也是节气」的日子，避免显示成「清明节假期 · 清明」
+    return holiday.startsWith(term) ? `${holiday}假期` : `${holiday}假期 · ${term}`;
+  }
+  if (holiday) return `${holiday}假期`;
+  if (term) return term;
+  const next = findNextFestival(now);
+  return next ? `距${next.name} ${next.days}天` : '';
+}
+
+// 结果按「天」缓存：同一天里算一次就够，不必每秒重新遍历节气表
+let festivalCache = { key: '', text: '' };
+function getFestivalText(now) {
+  const key = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+  if (key !== festivalCache.key) {
+    festivalCache = { key, text: buildFestivalText(now) };
+  }
+  return festivalCache.text;
+}
+
+/** 顶部信息栏：日期 + 中文星期 + 节假日/节气 + 实时时钟 */
 function updateTopbar(now) {
   dom.dateText.textContent =
     `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${WEEK_TEXT[now.getDay()]}`;
+  // 节假日 / 节气文字一天只变一次，值没变就不写 DOM，避免每秒无谓重绘
+  const festival = getFestivalText(now);
+  if (festival !== lastFestivalText) {
+    lastFestivalText = festival;
+    dom.festivalText.textContent = festival ? ` · ${festival}` : '';
+  }
   dom.clock.textContent =
     `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`;
 }
