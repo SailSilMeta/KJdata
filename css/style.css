@@ -948,6 +948,59 @@ html[data-theme="dark"] .course-card.is-pending::after {
   color: var(--text-sub);
 }
 
+/* ---------- 课表服务状态指示灯（面板标题栏下方，不随课程列表滚动） ---------- */
+.override-service {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  flex-shrink: 0;              /* 面板是纵向 flex，避免被课程列表挤扁 */
+  margin: 12px 18px 0;
+  padding: 9px 12px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background-color: var(--field-bg);
+}
+
+/* 小圆点：绿=正常、红=异常、灰=状态未知（读不到状态文件） */
+.service-dot {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, .18);
+}
+
+.service-dot.is-ok {
+  background-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, .20);
+}
+
+.service-dot.is-error {
+  background-color: #dd5257;
+  box-shadow: 0 0 0 3px rgba(221, 82, 87, .20);
+}
+
+.service-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;               /* 允许时间文字换行，不撑破面板 */
+}
+
+.service-main {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.service-time {
+  font-size: 12px;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+
 .override-body {
   flex: 1;
   min-height: 0;

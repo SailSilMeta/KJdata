@@ -277,6 +277,16 @@
         <button class="override-btn override-btn-ghost" id="overrideClose" type="button">关闭</button>
       </header>
 
+      <!-- 课表服务状态指示灯：由 override.js 读取 data/fetch-status.json 渲染
+           绿灯 = 最近一次抓取成功，红灯 = 最近一次抓取失败，灰灯 = 读不到状态文件 -->
+      <div class="override-service" id="serviceStatus">
+        <span class="service-dot" id="serviceDot" aria-hidden="true"></span>
+        <div class="service-info">
+          <span class="service-main" id="serviceText">正在检查课表服务状态…</span>
+          <span class="service-time" id="serviceTime"></span>
+        </div>
+      </div>
+
       <div class="override-body">
         <!-- 新增 / 编辑表单 -->
         <section class="override-section">

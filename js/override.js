@@ -23,6 +23,11 @@
   const LONG_PRESS_MS = 700;                 // 长按进入编辑面板的时长
   const WEEK_TEXT = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
+  // 课表抓取服务的状态文件（与 data/timetable.json 同一目录，由 Actions 每次运行刷新）。
+  // 为什么需要它：抓取失败时线上会沿用旧的 timetable.json，只靠数据时间无法判断「失败」，
+  // 所以工作流额外写这个心跳文件，带上本次是否成功、尝试时间与最近一次成功时间。
+  const STATUS_URL = 'data/fetch-status.json';
+
   // 参与「修改」的字段，顺序与表单一致
   const EDITABLE_FIELDS = ['name', 'weekday', 'startTime', 'endTime', 'classroom', 'teacher'];
 
@@ -390,6 +395,49 @@
   }
 
   // ============================================================
+  // 课表服务状态指示灯
+  // ============================================================
+
+  /**
+   * 读取状态文件并点亮指示灯（每次打开面板时查一次）
+   *   绿灯：最近一次抓取成功 —— 显示最近成功时间
+   *   红灯：最近一次抓取失败 —— 显示最近尝试时间（并附带最近成功时间，便于判断数据有多旧）
+   *   灰灯：读不到状态文件（本地调试、或该功能上线前的旧版本）—— 如实说明，不误报成故障
+   */
+  async function refreshServiceStatus() {
+    const dot = $('serviceDot');
+    const text = $('serviceText');
+    const time = $('serviceTime');
+    if (!dot || !text || !time) return;
+
+    const render = (state, main, sub) => {
+      dot.className = 'service-dot' + (state ? ' is-' + state : '');
+      text.textContent = main;
+      time.textContent = sub || '';
+    };
+
+    render('', '正在检查课表服务状态…', '');
+
+    try {
+      // 带时间戳，避免读到浏览器 / GitHub Pages 的缓存状态
+      const res = await fetch(`${STATUS_URL}?v=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const status = await res.json();
+
+      if (status.ok) {
+        render('ok', '拉取课表服务正常', `最近成功：${status.lastSuccessAt || '未知'}`);
+      } else {
+        render('error', '拉取课表服务异常',
+          `最近尝试：${status.lastAttemptAt || '未知'}` +
+          (status.lastSuccessAt ? ` · 最近成功：${status.lastSuccessAt}` : ''));
+      }
+    } catch (err) {
+      render('', '未能获取课表服务状态', '本地调试或状态文件缺失');
+      console.warn('课表服务状态文件读取失败：', err.message);
+    }
+  }
+
+  // ============================================================
   // 编辑面板：开关与隐藏入口
   // ============================================================
 
@@ -397,6 +445,7 @@
     $('overrideMask').hidden = false;
     resetForm();
     renderList();
+    refreshServiceStatus(); // 每次打开都重新查一次服务状态
     document.body.classList.add('override-open');
   }
 
