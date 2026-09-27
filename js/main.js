@@ -32,6 +32,139 @@ const DATA_REFRESH_MS = 5 * 60000;   // 课程数据刷新间隔：5 分钟（�
 const TICK_MS = 1000;                // 倒计时刷新间隔：1 秒
 const LONG_GAP_MS = 48 * 60 * 60 * 1000; // 长间隔阈值：48 小时（2880 分钟）
 
+// ============================================================
+// 时间调试：网址带 ?debug=1 才启用，不带时整段不生效（本地 / 线上通用，默认关闭）
+//   ?debug=1                           右下角出现「时间调试」浮层，可随手改时间
+//   ?debug=1&date=2026-10-01           同时把「当前时间」拨到这一天（时分秒沿用真实的）
+//   ?debug=1&now=2026-10-01%2009:30    连时分秒一起拨（空格写成 %20）
+// 拨动后的「当前时间」作用于全站：时钟、倒计时、课程状态、节假日 / 节气、主题自动切换。
+// 用浮层里的「回到真实时间」复原；偏移不写 localStorage，刷新页面即回真实时间。
+//
+// 安全性：纯前端临时改动，不发任何网络请求、不读凭据、不写 localStorage，
+//         只影响当前浏览器这一次打开的显示；网址参数先经严格正则校验再转数字，
+//         面板内容为静态模板且统一用 textContent 写入，不存在注入面。
+// ============================================================
+const DEBUG_ENABLED = new URLSearchParams(location.search).has('debug');
+let debugOffset = 0; // 假造时间相对真实时间的偏移毫秒数，0 表示真实时间
+
+/** 当前时间：调试模式下按偏移量假造，否则就是真实系统时间 */
+function nowDate() {
+  return debugOffset ? new Date(Date.now() + debugOffset) : new Date();
+}
+
+/** 格式化成 "YYYY-MM-DD HH:mm:ss" */
+function formatFull(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ` +
+    `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
+}
+
+/** 把「当前时间」拨到指定时刻 */
+function setDebugTime(target) {
+  debugOffset = target.getTime() - Date.now();
+}
+
+/** 刷新调试浮层的文字与输入框（每秒由 tick 调用） */
+function refreshDebugPanel(now) {
+  if (!DEBUG_ENABLED) return;
+  const fakeEl = $('debugFake');
+  if (!fakeEl) return;
+  const fake = now || nowDate();
+  fakeEl.textContent = formatFull(fake);
+  $('debugReal').textContent = `真实：${formatFull(new Date())}`;
+  const input = $('debugInput');
+  // 正在输入时不要回写，否则会打断输入
+  if (document.activeElement !== input) {
+    input.value = `${fake.getFullYear()}-${pad2(fake.getMonth() + 1)}-${pad2(fake.getDate())}` +
+      `T${pad2(fake.getHours())}:${pad2(fake.getMinutes())}`;
+  }
+}
+
+/** 调试浮层：仅 ?debug=1 时创建，支持网址参数预设、增减天数 / 小时、直接选时刻、一键复原 */
+function initDebug() {
+  if (!DEBUG_ENABLED) return;
+
+  // 网址参数给的初始时刻（?date / ?now）
+  const raw = new URLSearchParams(location.search).get('now') ||
+    new URLSearchParams(location.search).get('date');
+  const m = raw && raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{1,2}))?$/);
+  if (m) {
+    const real = new Date();
+    const withTime = m[4] !== undefined;
+    setDebugTime(new Date(
+      +m[1], +m[2] - 1, +m[3],
+      withTime ? +m[4] : real.getHours(),
+      withTime ? +m[5] : real.getMinutes(),
+      withTime ? 0 : real.getSeconds()
+    ));
+  }
+
+  const panel = document.createElement('div');
+  panel.className = 'debug-panel';
+  panel.innerHTML = `
+    <p class="debug-head">时间调试 <em>临时</em>
+      <button type="button" id="debugTogglePanel" class="debug-mini">展开</button>
+    </p>
+    <p class="debug-line debug-fake"><span id="debugFake"></span></p>
+    <div class="debug-body">
+      <p class="debug-line debug-real" id="debugReal"></p>
+      <div class="debug-row">
+        <button type="button" data-min="-1440">−1天</button>
+        <button type="button" data-min="1440">+1天</button>
+        <button type="button" data-min="-60">−1时</button>
+        <button type="button" data-min="60">+1时</button>
+      </div>
+      <div class="debug-row">
+        <input id="debugInput" type="datetime-local" step="60">
+        <button type="button" id="debugApply">应用</button>
+      </div>
+      <div class="debug-row">
+        <button type="button" id="debugReset" class="debug-wide">回到真实时间</button>
+      </div>
+    </div>`;
+  document.body.appendChild(panel);
+
+  // 手机屏幕窄，默认收起成一条（只留被拨到的时间），避免挡住卡片底部那行小字；
+  // 电脑上默认展开。点右上角「展开 / 收起」随时切换。
+  const toggleBtn = $('debugTogglePanel');
+  const setCollapsed = (collapsed) => {
+    panel.classList.toggle('is-collapsed', collapsed);
+    toggleBtn.textContent = collapsed ? '展开' : '收起';
+  };
+  setCollapsed((window.innerWidth || 9999) <= 520); // 与 style.css 里 520px 的断点保持一致
+  toggleBtn.addEventListener('click', () => {
+    setCollapsed(!panel.classList.contains('is-collapsed'));
+  });
+
+  // 改完时间立刻重绘整页（时钟、倒计时、课程状态、主题），不用等下一秒的定时刷新
+  const applyChange = () => {
+    refreshDebugPanel();
+    tick();
+  };
+
+  // 增减分钟数（按钮上的 data-min）
+  panel.querySelectorAll('[data-min]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      debugOffset += Number(btn.dataset.min) * 60000;
+      applyChange();
+    });
+  });
+
+  // 直接选一个日期 + 时刻
+  $('debugApply').addEventListener('click', () => {
+    const v = $('debugInput').value; // 形如 2026-10-01T09:30
+    const t = v && v.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (t) setDebugTime(new Date(+t[1], +t[2] - 1, +t[3], +t[4], +t[5], 0));
+    applyChange();
+  });
+
+  $('debugReset').addEventListener('click', () => {
+    debugOffset = 0;
+    applyChange();
+  });
+
+  refreshDebugPanel();
+}
+
 // 三种状态的卡片文案：图标 / 小标题 / 底部小字
 // 对应的卡片配色由类名 is-pending / is-ongoing / is-holiday 控制（见 style.css）
 const CARD_VIEW = {
@@ -414,14 +547,54 @@ function tick() {
   // 还会让浏览器在弹层背后反复重绘，是面板卡顿的来源之一。
   if (dom.overrideMask && !dom.overrideMask.hidden) return;
 
-  const now = new Date();
+  const now = nowDate(); // 调试模式下可能是被拨动的假造时间
+  syncTheme(now);      // 每秒检查：跨越日出/日落、或手动选择到期时自动切换主题
+  refreshDebugPanel(now);
   updateTopbar(now);
   renderCourse(now, findNearestCourse(now));
 }
 
 // ============================================================
-// 主题切换
+// 日间 / 夜间主题（自动跟随日出日落 + 可手动切换）
 // ============================================================
+
+// 【自动跟随日出日落】每月一档的近似的日出 / 日落时刻（分钟数），按广东江门（约北纬 22.5°）
+// 的天光估算，索引 = 月份 - 1。落在 [日出, 日落) 区间内算白天，其余算夜间。
+// 各地实际天光不同，需要调整就只改这张表。
+const THEME_SUN_TABLE = [
+  [7 * 60 + 5, 17 * 60 + 55],   // 1 月
+  [6 * 60 + 50, 18 * 60 + 15],  // 2 月
+  [6 * 60 + 30, 18 * 60 + 30],  // 3 月
+  [6 * 60 + 5, 18 * 60 + 45],   // 4 月
+  [5 * 60 + 50, 19 * 60 + 0],   // 5 月
+  [5 * 60 + 45, 19 * 60 + 15],  // 6 月
+  [5 * 60 + 50, 19 * 60 + 15],  // 7 月
+  [6 * 60 + 0, 18 * 60 + 55],   // 8 月
+  [6 * 60 + 15, 18 * 60 + 30],  // 9 月
+  [6 * 60 + 30, 18 * 60 + 5],   // 10 月
+  [6 * 60 + 45, 17 * 60 + 50],  // 11 月
+  [7 * 60 + 0, 17 * 60 + 50]    // 12 月
+];
+
+let manualThemeUntil = 0; // 手动切换的作用截止时间戳；0 表示当前是「自动跟随」
+
+/** 该用白天还是夜间主题：按当月日出日落判断 */
+function themeByClock(date) {
+  const [sunrise, sunset] = THEME_SUN_TABLE[date.getMonth()];
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  return minutes >= sunrise && minutes < sunset ? 'light' : 'dark';
+}
+
+/** 下一个自动切换点的毫秒时间戳（今天日落；已过日落则取明天日出） */
+function nextThemeSwitchAt(date) {
+  const [sunrise, sunset] = THEME_SUN_TABLE[date.getMonth()];
+  const minutes = date.getHours() * 60 + date.getMinutes();
+  const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  if (minutes < sunrise) return dayStart + sunrise * 60000;  // 此刻是夜间 → 等今天日出
+  if (minutes < sunset) return dayStart + sunset * 60000;    // 此刻是白天 → 等今天日落
+  const tomorrow = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1); // 已入夜 → 等明天日出
+  return tomorrow.getTime() + THEME_SUN_TABLE[tomorrow.getMonth()][0] * 60000;
+}
 
 /** 应用主题：dark / light，并同步按钮图标 */
 function applyTheme(theme) {
@@ -430,15 +603,40 @@ function applyTheme(theme) {
   dom.themeToggle.textContent = theme === 'dark' ? '🌞' : '🌙';
 }
 
-/** 初始化主题：读取本地记忆，并绑定切换事件 */
+/** 每秒调用：手动选择过期后交还给自动跟随；自动模式下跨越日出/日落时切主题 */
+function syncTheme(now) {
+  if (manualThemeUntil && now.getTime() >= manualThemeUntil) {
+    manualThemeUntil = 0;                    // 手动选择到点，恢复自动
+    localStorage.removeItem(THEME_KEY);
+  }
+  if (manualThemeUntil) return;              // 手动选择仍在有效期内，不干预
+  const auto = themeByClock(now);
+  if (document.documentElement.getAttribute('data-theme') !== auto) applyTheme(auto);
+}
+
+/** 初始化主题：按当前时间自动定初始主题，恢复有效期内的手动选择，并绑定切换按钮 */
 function initTheme() {
-  const saved = localStorage.getItem(THEME_KEY);
-  applyTheme(saved === 'dark' ? 'dark' : 'light');
+  // 上次的手动选择只有在有效期内才沿用（旧格式 / 已过期的值一律忽略，直接走自动）
+  let savedTheme = '';
+  try {
+    const saved = JSON.parse(localStorage.getItem(THEME_KEY) || 'null');
+    if (saved && (saved.theme === 'dark' || saved.theme === 'light') && saved.until > Date.now()) {
+      manualThemeUntil = saved.until;
+      savedTheme = saved.theme;
+    } else {
+      localStorage.removeItem(THEME_KEY); // 旧格式或已过期的记录直接清掉
+    }
+  } catch (e) {
+    localStorage.removeItem(THEME_KEY); // 存的值已损坏，清掉后走自动
+  }
+  applyTheme(savedTheme || themeByClock(nowDate()));
 
   dom.themeToggle.addEventListener('click', () => {
     const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     applyTheme(next);
-    localStorage.setItem(THEME_KEY, next);
+    // 手动选择只维持到下一个日出 / 日落分界点，之后自动跟随
+    manualThemeUntil = nextThemeSwitchAt(nowDate());
+    localStorage.setItem(THEME_KEY, JSON.stringify({ theme: next, until: manualThemeUntil }));
   });
 }
 
@@ -508,6 +706,7 @@ function updateWeekStat() {
 // 启动
 // ============================================================
 async function init() {
+  initDebug(); // 仅 ?debug=1 时生效：先拨好假造时间，后面的主题 / 时钟 / 课程都按它计算
   initTheme();
 
   // 先渲染一次（此时可能还是空数据），避免等待接口期间白屏
