@@ -79,7 +79,7 @@ jobs:
           if [ -f public/data/timetable.json ]; then
             msg="chore: 更新课表数据（$(date -u '+%Y-%m-%d %H:%M') UTC）"
           else
-            msg="chore: 发布前端更新（$(date -u '+%Y-%m-%d %H:%M') UTC）"
+            msg="chore: 更新服务状态与前端（抓取失败，课表沿用旧数据）（$(date -u '+%Y-%m-%d %H:%M') UTC）"
           fi
 
           git fetch origin gh-pages
@@ -101,6 +101,36 @@ jobs:
               echo "gh-pages 上也没有历史数据，本次先不带课表数据发布"
             fi
           fi
+
+          # 写「课表服务状态」心跳文件，供前端手动调课面板里的状态指示灯使用。
+          # 关键点：抓取失败时 timetable.json 是沿用旧值，前端只看数据时间无法判断失败，
+          # 所以这里额外记录本次是否成功、本次尝试时间与最近一次成功时间。
+          # 时间格式与 updatedAt 保持一致（北京时间 YYYY-MM-DD HH:MM:SS）。
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timedelta, timezone
+
+          bj = timezone(timedelta(hours=8))
+          now = datetime.now(bj).strftime("%Y-%m-%d %H:%M:%S")
+          data_path = ".deploy/data/timetable.json"
+
+          fetched = os.path.exists("public/data/timetable.json")
+          last_success = ""
+          if fetched:
+              last_success = now
+          elif os.path.exists(data_path):
+              with open(data_path, encoding="utf-8") as f:
+                  last_success = json.load(f).get("updatedAt") or ""
+
+          with open(".deploy/data/fetch-status.json", "w", encoding="utf-8") as f:
+              json.dump({
+                  "ok": fetched,
+                  "lastAttemptAt": now,
+                  "lastSuccessAt": last_success,
+              }, f, ensure_ascii=False, indent=2)
+              f.write("\n")
+          print("服务状态已写入：ok =", fetched, "最近成功 =", last_success or "未知")
+          PY
 
           cd .deploy
           git add -A
