@@ -1038,6 +1038,126 @@ html[data-theme="dark"] .course-card.is-pending::after {
   gap: 10px;
 }
 
+/* ============================================================
+   【仅本地调试】时间调试浮层
+   元素只在网址带 ?debug=1 时才由 main.js 创建，正常访问不会出现
+   ============================================================ */
+.debug-panel {
+  position: fixed;
+  right: 12px;
+  bottom: 8px;
+  z-index: 90;                    /* 低于手动调课遮罩（100），被遮罩盖住时不干扰操作 */
+  width: min(250px, 70vw);
+  padding: 12px 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  background-color: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  color: var(--text-main);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.debug-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+
+.debug-head em {
+  font-style: normal;
+  font-weight: 400;
+  opacity: .7;
+}
+
+/* 展开 / 收起：手机上默认收起，只留一行时间，避免挡住卡片底部的小字 */
+.debug-mini {
+  padding: 2px 8px;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  background-color: var(--field-bg);
+  color: var(--text-sub);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.debug-panel.is-collapsed .debug-body {
+  display: none;
+}
+
+.debug-panel.is-collapsed .debug-fake {
+  font-size: 13px;
+}
+
+.debug-line {
+  margin: 0;
+}
+
+/* 假造时间是主角，字号放大 + 等宽数字，方便一眼看清被拨到了哪一刻 */
+.debug-fake {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.debug-real {
+  font-size: 11px;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.debug-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.debug-row button,
+.debug-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background-color: var(--field-bg);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.debug-row button {
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.debug-row input {
+  color: var(--field-text);
+}
+
+.debug-row button:active {
+  transform: scale(.97);
+}
+
+/* 手机窄屏：面板更小、更贴右下角；收起时宽度按内容缩到最小的一个小条 */
+@media (max-width: 520px) {
+  .debug-panel {
+    right: 8px;
+    bottom: 6px;
+    width: min(215px, 60vw);
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .debug-panel.is-collapsed {
+    width: auto;
+  }
+}
+
 /* ---------- 按钮 ---------- */
 .override-btn {
   padding: 10px 16px;
