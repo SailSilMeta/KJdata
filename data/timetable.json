@@ -89,6 +89,22 @@
       "teacher": "陈伟聪"
     },
     {
+      "name": "中国近现代史纲要",
+      "weekday": 4,
+      "startTime": "14:00",
+      "endTime": "15:20",
+      "classroom": "H2-103（江）",
+      "teacher": "常家瑶"
+    },
+    {
+      "name": "中国近现代史纲要",
+      "weekday": 5,
+      "startTime": "09:00",
+      "endTime": "10:20",
+      "classroom": "H3-404(江)",
+      "teacher": "常家瑶"
+    },
+    {
       "name": "形势与政策 V",
       "weekday": 5,
       "startTime": "10:40",
@@ -105,6 +121,6 @@
       "teacher": "陈伟聪"
     }
   ],
-  "updatedAt": "2026-09-27 23:50:05",
+  "updatedAt": "2026-09-28 07:41:15",
   "source": "zf_api"
 }
