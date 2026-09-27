@@ -40,7 +40,11 @@ jobs:
       # Settings → Secrets and variables → Actions 中配置：
       #   Secrets: ZF_BASE_URL / ZF_USERNAME / ZF_PASSWORD
       #   Variables（可选，不配则用代码里的默认值）: ZF_YEAR / ZF_TERM / SEMESTER_START_DATE
+      # continue-on-error：教务系统偶尔会 HTTP 层挂死（请求永不返回，实测同一台机器
+      # 数百毫秒返回与挂满超时并存），这属于校方系统的间歇故障，不该让整个任务中断，
+      # 否则前端改动也会被一起卡住。失败时由下一步打出醒目提示，数据沿用线上旧值。
       - name: 登录正方教务系统并生成静态课表
+        continue-on-error: true
         env:
           ZF_BASE_URL: ${{ secrets.ZF_BASE_URL }}
           ZF_USERNAME: ${{ secrets.ZF_USERNAME }}
@@ -48,22 +52,63 @@ jobs:
           ZF_YEAR: ${{ vars.ZF_YEAR }}
           ZF_TERM: ${{ vars.ZF_TERM }}
           SEMESTER_START_DATE: ${{ vars.SEMESTER_START_DATE }}
-          # 单请求超时（秒）。代码默认 8 秒，但教务系统在会话建立（TLS/DNS 冷启动）
-          # 或偶发负载高时会超过 8 秒，被客户端掐断后表现为「登录失败：登录超时（code=1003）」。
-          # 这里放宽到 30 秒，避免把「只是慢」误判成「登录失败」。
+          # 单请求超时（秒），代码默认 8 秒。放宽到 30 秒是为了容忍「慢但最终会返回」的
+          # 情况；注意这治不了上面说的「挂死」，那种情况只能靠「抓取失败不影响前端发布」兜底。
           ZF_REQUEST_TIMEOUT: '30'
         run: python scripts/fetch_timetable.py
 
-      # 拉取失败时本步骤不会执行，gh-pages 保持上一次的成功结果，不会把课表数据刷成空。
-      - name: 发布 public 目录到 gh-pages 分支
+      # 抓取是否成功，以「有没有生成数据文件」为准：public/data/ 已被 .gitignore 忽略，
+      # 检出代码时并不存在，只有抓取成功才会被写出来。这里同时也是给失败留的醒目提示。
+      - name: 检查抓取结果
+        if: always()
         run: |
+          if [ -f public/data/timetable.json ]; then
+            echo "课表抓取成功，本次会一并更新线上数据"
+          else
+            echo "::warning::课表抓取失败（教务系统可能暂时不可用或响应挂死）。本次只发布前端，线上课表数据保持上一次的值不变。"
+          fi
+
+      # if: always() —— 前端改动与课表数据解耦：抓取失败时也要把 public/ 发布出去，
+      # 不能让教务系统的间歇故障把样式 / 逻辑更新一起卡死。
+      # 数据兜底：抓取失败时 public/data/timetable.json 不存在，此时保留 gh-pages 上
+      # 已发布的旧数据，保证线上课表不会被刷成空白。
+      - name: 发布 public 目录到 gh-pages 分支
+        if: always()
+        run: |
+          set -e
+          if [ -f public/data/timetable.json ]; then
+            msg="chore: 更新课表数据（$(date -u '+%Y-%m-%d %H:%M') UTC）"
+          else
+            msg="chore: 发布前端更新（$(date -u '+%Y-%m-%d %H:%M') UTC）"
+          fi
+
           git fetch origin gh-pages
           git worktree add --detach .deploy origin/gh-pages
+          # 先把上一次已发布的课表数据备份出来，作为本次没抓到数据时的兜底
+          if [ -d .deploy/data ]; then
+            mkdir -p "$RUNNER_TEMP/prev-data"
+            cp -r .deploy/data/. "$RUNNER_TEMP/prev-data/"
+          fi
+
           find .deploy -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
           cp -r public/. .deploy/
+          if [ ! -f .deploy/data/timetable.json ]; then
+            echo "本次未抓到课表数据，沿用 gh-pages 上的旧数据"
+            mkdir -p .deploy/data
+            if [ -d "$RUNNER_TEMP/prev-data" ]; then
+              cp -r "$RUNNER_TEMP/prev-data/." .deploy/data/
+            else
+              echo "gh-pages 上也没有历史数据，本次先不带课表数据发布"
+            fi
+          fi
+
           cd .deploy
           git add -A
+          if git diff --cached --quiet; then
+            echo "内容与 gh-pages 现有版本一致，无需提交"
+            exit 0
+          fi
           git -c user.name='github-actions[bot]' \
               -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-              commit -m "chore: 更新课表数据（$(date -u '+%Y-%m-%d %H:%M') UTC）"
+              commit -m "$msg"
           git push origin HEAD:gh-pages
