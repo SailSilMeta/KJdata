@@ -27,7 +27,11 @@
     sheet: document.getElementById('todaySheet'),
     body: document.getElementById('todayBody'),
     refresh: document.getElementById('todayRefresh'),
-    refreshText: document.getElementById('todayRefreshText')
+    refreshText: document.getElementById('todayRefreshText'),
+    // 抽屉里的课表服务状态指示灯（与手动调课面板那组同步点亮）
+    serviceDot: document.getElementById('todayServiceDot'),
+    serviceText: document.getElementById('todayServiceText'),
+    serviceTime: document.getElementById('todayServiceTime')
   };
   if (!dom.toggle || !dom.sheet || !dom.body) return;
 
@@ -213,6 +217,7 @@
 
     lastSignature = '';
     render();
+    refreshServiceStatus(); // 每次打开抽屉都重新查一次服务状态
     if (!refreshTimer) refreshTimer = setInterval(render, REFRESH_MS);
   }
 
@@ -234,7 +239,26 @@
     return dom.sheet.classList.contains('is-open');
   }
 
+  /**
+   * 顺手刷新课表服务状态指示灯：请求与渲染都在 override.js 里（一次请求同时点亮面板与抽屉两处灯具），
+   * 这里只做转发，不 await、失败静默 —— 灯亮不亮不应影响抽屉本身的使用
+   */
+  function refreshServiceStatus() {
+    const ov = window.TimetableOverride;
+    if (ov && typeof ov.refreshServiceStatus === 'function') ov.refreshServiceStatus();
+  }
+
   function init() {
+    // 把抽屉这组指示灯注册给 override.js，之后每次刷新状态都会与手动调课面板那组一起点亮
+    const ov = window.TimetableOverride;
+    if (ov && typeof ov.registerServiceStatusTarget === 'function') {
+      ov.registerServiceStatusTarget({
+        dot: dom.serviceDot,
+        text: dom.serviceText,
+        time: dom.serviceTime
+      });
+    }
+
     // 展开 / 收起
     dom.toggle.addEventListener('click', () => (isOpen() ? close() : open()));
     // 刷新课表（重新拉取数据 + 更新服务状态指示灯）

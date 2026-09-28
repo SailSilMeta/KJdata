@@ -288,6 +288,17 @@
         <span id="todayRefreshText">刷新课表</span>
       </button>
     </header>
+
+    <!-- 课表服务状态指示灯：与「手动调课」面板里那组同步更新（由 override.js 一次请求统一渲染），
+         放在标题栏正下方、滚动区域之外，保证始终可见 -->
+    <div class="override-service today-service" id="todayService">
+      <span class="service-dot" id="todayServiceDot" aria-hidden="true"></span>
+      <div class="service-info">
+        <span class="service-main" id="todayServiceText">正在检查课表服务状态…</span>
+        <span class="service-time" id="todayServiceTime"></span>
+      </div>
+    </div>
+
     <div class="today-body" id="todayBody"></div>
   </aside>
 

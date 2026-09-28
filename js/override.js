@@ -399,21 +399,32 @@
   // ============================================================
 
   /**
-   * 读取状态文件并点亮指示灯（每次打开本面板、或点击抽屉里的「刷新课表」时查一次）
+   * 读取状态文件并点亮指示灯（每次打开本面板、打开今日课程抽屉、或点击抽屉里的「刷新课表」时查一次）
    *   绿灯：最近一次抓取成功 —— 显示最近成功时间
    *   红灯：最近一次抓取失败 —— 显示最近尝试时间（并附带最近成功时间，便于判断数据有多旧）
    *   灰灯：读不到状态文件（本地调试、或该功能上线前的旧版本）—— 如实说明，不误报成故障
+   * 只请求一次状态文件，把同一份状态同时渲染到所有已注册的指示灯上，
+   * 保证「手动调课面板」与「今日全部课程抽屉」两处的灯永远一致。
    */
+
+  // 所有需要同步点亮的指示灯具（每组含 dot / text / time 三个元素）
+  const serviceTargets = [];
+
+  /** 注册一组指示灯元素，注册后会被 refreshServiceStatus 一同点亮（today.js 用它注册抽屉里那一组） */
+  function registerServiceStatusTarget(target) {
+    if (!target || !target.dot || !target.text || !target.time) return;
+    serviceTargets.push(target);
+  }
+
   async function refreshServiceStatus() {
-    const dot = $('serviceDot');
-    const text = $('serviceText');
-    const time = $('serviceTime');
-    if (!dot || !text || !time) return;
+    if (!serviceTargets.length) return;
 
     const render = (state, main, sub) => {
-      dot.className = 'service-dot' + (state ? ' is-' + state : '');
-      text.textContent = main;
-      time.textContent = sub || '';
+      serviceTargets.forEach((t) => {
+        t.dot.className = 'service-dot' + (state ? ' is-' + state : '');
+        t.text.textContent = main;
+        t.time.textContent = sub || '';
+      });
     };
 
     render('', '正在检查课表服务状态…', '');
@@ -483,6 +494,9 @@
   // ============================================================
 
   function init() {
+    // 面板自己的那组指示灯先注册进来，refreshServiceStatus 会连同抽屉那组一起点亮
+    registerServiceStatusTarget({ dot: $('serviceDot'), text: $('serviceText'), time: $('serviceTime') });
+
     $('overrideForm').addEventListener('submit', onSubmit);
     $('overrideClose').addEventListener('click', closePanel);
     $('ovReset').addEventListener('click', resetForm);
@@ -507,7 +521,8 @@
     readStore,
     openPanel,
     closePanel,
-    refreshServiceStatus // 供「今日全部课程」抽屉的「刷新课表」按钮复用
+    refreshServiceStatus, // 供「今日全部课程」抽屉的「刷新课表」按钮复用
+    registerServiceStatusTarget // 供 today.js 把抽屉里那组指示灯注册进来，与面板那组同步点亮
   };
 
   init();
