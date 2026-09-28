@@ -170,7 +170,8 @@ function initDebug() {
 const CARD_VIEW = {
   pending: { icons: '⏰ 📖', subtitle: '即将开课', foot: '做好准备，不要迟到' },
   ongoing: { icons: '✏️ 📚', subtitle: '上课进行中', foot: '专心听讲，认真学习' },
-  holiday: { icons: '📅 🌙 ☁️', subtitle: '较长假期', foot: '当前暂无课程安排，可安心休息～' }
+  // name：法定假期卡片上代替课程名显示的那句话（由 CSS 从 data 属性取，见 style.css）
+  holiday: { icons: '📅 🌙 ☁️', subtitle: '较长假期', foot: '当前暂无课程安排，可安心休息～', name: '今日暂无课程' }
 };
 
 let courses = [];        // 合并本地覆盖层后、用于展示的课程列表
@@ -422,44 +423,6 @@ function findNearestCourse(now) {
 // ============================================================
 
 /**
- * 法定假期卡片：整张卡片进入长假期模式，只显示「今日暂无课程」。
- *
- * 为什么要单独处理：正方课表是按「星期几」排的，没有按日期停课，
- * 假期里照常渲染就会把课表上那天该上的课当成「今天要上的课」，
- * 与「假期不上课」的事实相矛盾。所以只要今天落在法定假期内，
- * 一律不展示任何课程信息（课程名 / 教室 / 时间 / 老师 / 倒计时 / 进度条）。
- *
- * @param {string} holidayName 假期名（如「国庆节」）
- */
-function renderHolidayCard(holidayName) {
-  dom.emptyTip.hidden = true;
-  dom.cardContent.hidden = false;
-
-  // 假期的每一天共用同一套静态内容，只在「假期变了」时重绘一次
-  const key = `holiday-${holidayName}`;
-  if (key !== currentKey) {
-    currentKey = key;
-    const view = CARD_VIEW.holiday;
-    dom.courseCard.className = 'course-card is-holiday';
-    dom.statusIcons.textContent = view.icons;
-    dom.statusText.textContent = view.subtitle;
-    dom.cardFoot.textContent = view.foot;
-    dom.courseName.textContent = '今日暂无课程';
-    // 假期里没有任何课程信息可展示，教室 / 时间 / 老师三行一起收起
-    dom.classroom.hidden = true;
-    dom.courseTime.hidden = true;
-    dom.teacher.hidden = true;
-  }
-
-  // 倒计时 / 进度条 / 假期提示一律不出现，卡片上只留一句「今日暂无课程」
-  dom.countdownHint.hidden = true;
-  dom.countdownMain.hidden = true;
-  dom.progress.hidden = true;
-  dom.holidayTip.hidden = true;
-  lastNumText = ''; // 假期结束回到课程卡片时，重新播放一次倒计时数字动画
-}
-
-/**
  * 渲染最近一节课卡片与倒计时
  * @param {Date} now        当前时间
  * @param {Object|null} found findNearestCourse 的结果
@@ -467,12 +430,16 @@ function renderHolidayCard(holidayName) {
 function renderCourse(now, found) {
   // ---------- 法定假期判断（核心逻辑） ----------
   // 只要「今天」落在法定假期内，就整张卡片走假期模式，不再看课表里今天排了什么课；
-  // 即使当天课表上还排着课、或距离下节课不足 48 小时，也一样按「今日暂无课程」展示
+  // 即使当天课表上还排着课、或距离下节课不足 48 小时，也一样按「今日暂无课程」展示。
+  //
+  // 为什么要整张拦下来：正方课表是按「星期几」排的，没有按日期停课，
+  // 假期里照常渲染就会把课表上那天该上的课当成「今天要上的课」，与「假期不上课」的事实相矛盾。
+  //
+  // 展示上不露任何课程信息，但【仍按普通卡片的结构完整渲染一遍，再整片藏起来】
+  // （见 style.css 的 .is-offday）：卡片高度全靠内容撑出来，那些行照常占位，
+  // 外框高度才能与普通课程卡片分毫不差，假期插画正好填满中间空出来的那一片。
   const holidayName = holidayOf(now);
-  if (holidayName) {
-    renderHolidayCard(holidayName);
-    return;
-  }
+  const dayoff = !!holidayName;
 
   // 没有任何课程时的空状态：区分「加载中 / 接口失败 / 确实无课」三种情况
   if (!found) {
@@ -501,20 +468,25 @@ function renderCourse(now, found) {
   // 则不展示分钟倒计时与进度条，卡片整体切换为「较长假期」状态
   const isLongGap = status === 'pending' && (found.start - now) > LONG_GAP_MS;
 
-  // 卡片三态：较长假期 / 上课中 / 待上课（决定配色与图标、小标题、底部小字）
-  const cardState = isLongGap ? 'holiday' : (status === 'ongoing' ? 'ongoing' : 'pending');
+  // 卡片三态：较长假期（法定假期也走这张卡片）/ 上课中 / 待上课，
+  // 决定配色与图标、小标题、底部小字
+  const cardState = (dayoff || isLongGap) ? 'holiday' : (status === 'ongoing' ? 'ongoing' : 'pending');
 
-  // 只有「课程 + 状态」变化时才重绘静态内容，避免每秒刷新造成闪烁
-  const key = `${course.id}-${found.start.getTime()}-${cardState}`;
+  // 只有「课程 + 状态」变化时才重绘静态内容，避免每秒刷新造成闪烁。
+  // 末尾的 -off：法定假期卡与普通长假期卡配色相同、内容却完全不同，必须各自重绘一次
+  const key = `${course.id}-${found.start.getTime()}-${cardState}${dayoff ? '-off' : ''}`;
   if (key !== currentKey) {
     currentKey = key;
     const view = CARD_VIEW[cardState];
-    // 类名决定卡片配色：极淡渐变底 + 细边框（夜间自动切换深色底与提亮主色）
-    dom.courseCard.className = 'course-card is-' + cardState;
+    // 类名决定卡片配色：极淡渐变底 + 细边框（夜间自动切换深色底与提亮主色）；
+    // is-offday 只负责「把课程信息整片藏起来 + 在课程名处盖一句话」，不改配色
+    dom.courseCard.className = 'course-card is-' + cardState + (dayoff ? ' is-offday' : '');
     dom.statusIcons.textContent = view.icons;
     dom.statusText.textContent = view.subtitle;
     dom.cardFoot.textContent = view.foot;
     dom.courseName.textContent = course.name;
+    // 法定假期：要显示的那句话放进 data 属性，由 CSS 的 ::after 取出来盖在课程名位置
+    if (dayoff) dom.courseName.dataset.holidayMsg = CARD_VIEW.holiday.name;
     dom.classroom.textContent = course.classroom;
     dom.classroom.hidden = false; // 从法定假期卡片切回来时，三行详情要重新出现
     dom.courseTime.textContent = `${course.startTime} - ${course.endTime}`;
@@ -530,7 +502,9 @@ function renderCourse(now, found) {
   }
 
   // ---------- 长间隔：只展示假期提示，隐藏分钟倒计时与进度条 ----------
-  if (isLongGap) {
+  // 法定假期例外：倒计时与进度条照常渲染、照常占位（只是被 CSS 整片藏起来），
+  // 卡片高度才与普通课程卡片一致
+  if (isLongGap && !dayoff) {
     dom.countdownHint.hidden = true;
     dom.countdownMain.hidden = true;
     dom.progress.hidden = true;

@@ -467,6 +467,49 @@ html[data-theme="dark"] .course-card.is-holiday::before {
   color: var(--text-main);
 }
 
+/* ============================================================
+   法定假期（今日暂无课程）卡片：与普通课程卡片【同尺寸】
+   ------------------------------------------------------------
+   这张卡片走的是「普通卡片的骨架」：卡片内容照常按下一节课渲染
+   （课程名 / 教室 / 时间 / 老师 / 倒计时 / 进度条全部在位，只是看不见），
+   所以外框高度与普通课程卡片分毫不差，假期插画正好填满中间那一片。
+   为什么必须留位：卡片高度全靠内容撑出来，若把这些行整个 display:none 掉，
+   卡片就会缩成小小一块 —— 那正是之前假期卡片比普通卡片矮一截的原因。
+   ============================================================ */
+.course-card.is-offday .classroom,
+.course-card.is-offday .course-time,
+.course-card.is-offday .teacher,
+.course-card.is-offday .countdown,
+.course-card.is-offday .progress {
+  visibility: hidden;         /* 只隐身、不塌陷：占位照旧，所以卡片高度不变 */
+}
+
+/* 课程名处改盖一句「今日暂无课程」：
+   真实课程名用透明色留着（只负责把这一行撑到正常高度，名称占几行就撑几行），
+   要显示的那句话由 ::after 从 data-holiday-msg 取出来叠在上面。
+   字号比课程名小一档（窄屏 12vw、宽屏封顶 64px）并 nowrap，保证任何屏宽下都是一行；
+   绝对定位不参与布局，所以这句话不会反过来影响卡片高度。 */
+.course-card.is-offday .course-name {
+  position: relative;         /* ::after 的定位基准 */
+  color: transparent;         /* 真实课程名只撑高度，不显示 */
+}
+
+.course-card.is-offday .course-name::after {
+  content: attr(data-holiday-msg);
+  position: absolute;
+  left: 50%;                  /* 课程名这一行的正中间（与卡片水平居中对齐） */
+  top: 0;
+  bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  color: var(--text-main);
+  font-size: clamp(32px, 12vw, 64px);
+  font-weight: 900;
+  line-height: 1.05;
+}
+
 /* ---------- 待上课卡片的底层装饰：抽象校园「教学楼 + 植被」线条插画 ----------
    插画本体是 index.html 里的一段内联 SVG（纯矢量，不含图片与外部资源），
    这里只负责它的位置、显隐与配色：
