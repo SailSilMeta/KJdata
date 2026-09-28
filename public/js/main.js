@@ -729,4 +729,29 @@ async function init() {
   window.addEventListener('timetable:resume', tick);
 }
 
+// ============================================================
+// 对外只读接口（供「今日全部课程」抽屉 js/today.js 使用）
+// 只暴露读取能力：不修改上面的主卡片 / 倒计时 / 进度条 / 主题逻辑，
+// 抽屉侧仅按同一套时间与合并后的课程数据自行渲染，互不干扰
+// ============================================================
+window.TimetableMain = {
+  getCourses: () => courses, // 已合并本地覆盖层的课程列表
+  nowDate,                   // 与主卡片同一套「当前时间」（含调试偏移）
+  findNearestCourse,         // 与主卡片一致的「最近一节课」判定，用于抽屉内高亮
+  weekdayOf,                 // 日期 → 1=周一 … 7=周日
+  toDateTime,                // (该日 0 点, "HH:mm") → Date
+  /**
+   * 「今日全部课程」抽屉里的「刷新课表」按钮调用：
+   *   1. 重新拉取课表数据（loadCourses 内部已含合并覆盖层 + 重绘主卡片；
+   *      拉取失败时它会保留上一次成功的数据，不会把大屏刷成空白）
+   *   2. 顺带更新课表服务状态指示灯（复用 override.js 里的既有实现）
+   * 数据拉取与状态更新都委托给已有函数，抽屉侧只负责调用与等待
+   */
+  refresh: async () => {
+    await loadCourses();
+    const ov = window.TimetableOverride;
+    if (ov && typeof ov.refreshServiceStatus === 'function') await ov.refreshServiceStatus();
+  }
+};
+
 init();

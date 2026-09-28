@@ -267,7 +267,29 @@
         <div class="empty-tip" id="emptyTip" hidden>暂无课程数据</div>
       </section>
     </main>
+
+    <!-- 「查看今日全部课程」：点击展开 / 收起今日课程抽屉（默认收起，不影响上方主卡片） -->
+    <button class="today-toggle" id="todayToggle" type="button"
+            aria-expanded="false" aria-controls="todaySheet">
+      <span class="today-toggle-icon" id="todayToggleIcon" aria-hidden="true">📋</span>
+      <span id="todayToggleText">查看今日全部课程</span>
+    </button>
   </div>
+
+  <!-- 今日全部课程抽屉：默认收起（不带 is-open），由 js/today.js 控制展开 / 收起。
+       浮在整页之上，不改动上方大屏主卡片的任何布局与逻辑 -->
+  <div class="today-mask" id="todayMask"></div>
+  <aside class="today-sheet" id="todaySheet" role="dialog" aria-modal="true" aria-label="今日全部课程">
+    <header class="today-sheet-head">
+      <h2 class="today-title">今日全部课程</h2>
+      <!-- 刷新课表：重新拉取已发布的课表数据，并顺带更新课表服务状态指示灯 -->
+      <button class="today-refresh" id="todayRefresh" type="button">
+        <span class="today-refresh-icon" id="todayRefreshIcon" aria-hidden="true">⟳</span>
+        <span id="todayRefreshText">刷新课表</span>
+      </button>
+    </header>
+    <div class="today-body" id="todayBody"></div>
+  </aside>
 
   <!-- 手动调课面板：隐藏入口，长按顶部日期区域 700ms 打开 -->
   <div class="override-mask" id="overrideMask" hidden>
@@ -351,5 +373,7 @@
   <!-- override.js 必须先加载，main.js 依赖 window.TimetableOverride -->
   <script src="js/override.js"></script>
   <script src="js/main.js"></script>
+  <!-- 今日全部课程抽屉：只读取 main.js 暴露的 window.TimetableMain，不改变主卡片逻辑 -->
+  <script src="js/today.js"></script>
 </body>
 </html>

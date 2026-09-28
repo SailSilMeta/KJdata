@@ -1336,6 +1336,290 @@ body.override-open {
   overflow: hidden;
 }
 
+/* ============================================================
+   「查看今日全部课程」按钮 + 今日课程抽屉
+   说明：抽屉浮在整页之上（position: fixed），不参与 .page 的 flex 布局，
+        因此不会挤压 / 改动上方大屏主卡片；按钮作为 .page 的最后一个 flex 子元素，
+        只占一条窄带，保证手机竖屏依然一屏展示、无滚动条。
+   ============================================================ */
+
+/* ---------- 触发按钮 ---------- */
+.today-toggle {
+  /* .page 是 column flex，默认 stretch，必须显式居中 */
+  align-self: center;
+  flex-shrink: 0;
+  /* z-index 必须高于遮罩（95），抽屉展开时按钮仍可点击，才能真正「展开 / 收起」 */
+  position: relative;
+  z-index: 97;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--toggle-border);
+  background-color: var(--toggle-bg);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, .10);
+  /* 颜色类属性瞬切（不参与主题过渡），只保留按下缩放反馈 */
+  transition: transform .2s ease;
+}
+
+.today-toggle:active {
+  transform: scale(.97);
+}
+
+.today-toggle-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* ---------- 抽屉遮罩 ---------- */
+.today-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background-color: rgba(15, 23, 42, .38);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .28s ease;
+}
+
+.today-mask.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ---------- 抽屉面板 ---------- */
+.today-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  /* 让出底部按钮的位置，抽屉浮在按钮上方，按钮始终露在外面可点 */
+  bottom: 72px;
+  z-index: 96;
+  width: min(calc(100% - 32px), 800px);
+  margin: 0 auto;
+  max-height: 66vh;
+  max-height: 66dvh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  border: 1px solid var(--card-border);
+  background-color: var(--card-bg);
+  box-shadow: 0 10px 32px rgba(15, 23, 42, .20);
+  /* 收起态：整体滑出屏幕外并隐藏（visibility 延迟到动画结束再切，避免闪一下） */
+  transform: translateY(calc(100% + 90px));
+  visibility: hidden;
+  transition: transform .3s cubic-bezier(.4, 0, .2, 1), visibility 0s linear .3s;
+}
+
+.today-sheet.is-open {
+  transform: translateY(0);
+  visibility: visible;
+  transition: transform .3s cubic-bezier(.4, 0, .2, 1), visibility 0s;
+}
+
+.today-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--card-border);
+  flex-shrink: 0;
+}
+
+.today-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+/* ---------- 抽屉里的「刷新课表」按钮 ---------- */
+.today-refresh {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--toggle-border);
+  background-color: var(--toggle-bg);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  /* 颜色类属性瞬切（不参与主题过渡），只保留按下缩放反馈 */
+  transition: transform .2s ease;
+}
+
+.today-refresh:active {
+  transform: scale(.97);
+}
+
+.today-refresh:disabled {
+  opacity: .6;
+  cursor: default;
+}
+
+.today-refresh-icon {
+  display: inline-block;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* 刷新中：图标持续旋转（减弱动画偏好下由文件末尾的媒体查询统一关掉） */
+.today-refresh.is-busy .today-refresh-icon {
+  animation: today-spin .8s linear infinite;
+}
+
+@keyframes today-spin {
+  to { transform: rotate(360deg); }
+}
+
+.today-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ---------- 分组标题 ---------- */
+.today-group-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+
+.today-group-count {
+  font-weight: 400;
+  opacity: .8;
+}
+
+/* ---------- 课程列表 ---------- */
+.today-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 单节课卡片：圆角 20px + 轻微阴影，配色由下方状态类给出的 --today-accent 决定 */
+.today-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--card-border);
+  background-color: var(--card-bg);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .08);
+  overflow: hidden;
+}
+
+/* 状态色：待上课蓝 / 上课中绿 / 已结束灰（与大屏主卡片规则一致） */
+.today-item.is-pending { --today-accent: var(--accent-blue); }
+.today-item.is-ongoing { --today-accent: var(--accent-green); }
+.today-item.is-done    { --today-accent: var(--text-sub); }
+
+/* 卡片左侧那条状态色竖条 */
+.today-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--today-accent);
+}
+
+.today-time {
+  flex-shrink: 0;
+  min-width: 88px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--today-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.today-main {
+  min-width: 0;
+}
+
+.today-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-main);
+  overflow-wrap: anywhere;
+}
+
+.today-meta {
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+/* 最近一节课：整卡描边用状态色 + 课程名后挂一枚小徽标 */
+.today-item.is-nearest {
+  border-color: var(--today-accent);
+}
+
+.today-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background-color: var(--today-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+/* 今日无课 */
+.today-empty {
+  padding: 28px 0;
+  text-align: center;
+  font-size: 15px;
+  color: var(--text-sub);
+}
+
+/* ---------- 窄屏（手机）压缩间距，保证不拥挤 ---------- */
+@media (max-width: 520px) {
+  .today-sheet-head {
+    padding: 12px 14px;
+  }
+
+  .today-body {
+    padding: 12px 14px;
+    gap: 14px;
+  }
+
+  .today-time {
+    min-width: 78px;
+    font-size: 12px;
+  }
+
+  .today-name {
+    font-size: 16px;
+  }
+}
+
 /* 尊重用户的减弱动画偏好 */
 @media (prefers-reduced-motion: reduce) {
   * {
