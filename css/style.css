@@ -1196,11 +1196,21 @@ html[data-theme="dark"] .course-card.is-pending::after {
   transform: scale(.97);
 }
 
+/* 视口不宽时，底部居中的「查看今日全部课程」按钮（z-index 97，高约 40px、
+   底边距 20px）会与右下角的浮层横向重叠，而浮层 z-index 只有 90，会被按钮盖住。
+   把浮层整体抬到按钮带之上（68px ≈ 按钮顶边 60px + 8px 间隙），两者互不遮挡；
+   宽屏下按钮与浮层隔着足够距离，仍保持原来的贴角位置。 */
+@media (max-width: 860px) {
+  .debug-panel {
+    bottom: 68px;
+  }
+}
+
 /* 手机窄屏：面板更小、更贴右下角；收起时宽度按内容缩到最小的一个小条 */
 @media (max-width: 520px) {
   .debug-panel {
     right: 8px;
-    bottom: 6px;
+    bottom: 68px;                  /* 同上：避开底部居中的「查看今日全部课程」按钮 */
     width: min(215px, 60vw);
     padding: 8px 10px;
     font-size: 11px;
