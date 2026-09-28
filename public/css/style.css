@@ -468,13 +468,16 @@ html[data-theme="dark"] .course-card.is-holiday::before {
 }
 
 /* ============================================================
-   法定假期（今日暂无课程）卡片：与普通课程卡片【同尺寸】
+   法定假期（今日暂无课程）卡片
    ------------------------------------------------------------
-   这张卡片走的是「普通卡片的骨架」：卡片内容照常按下一节课渲染
+   电脑端：走「普通卡片的骨架」—— 卡片内容照常按下一节课渲染
    （课程名 / 教室 / 时间 / 老师 / 倒计时 / 进度条全部在位，只是看不见），
    所以外框高度与普通课程卡片分毫不差，假期插画正好填满中间那一片。
    为什么必须留位：卡片高度全靠内容撑出来，若把这些行整个 display:none 掉，
    卡片就会缩成小小一块 —— 那正是之前假期卡片比普通卡片矮一截的原因。
+
+   手机端（≤520px）：反过来，保持原来的紧凑尺寸（课程信息整行收起不占位），
+   只把「今日暂无课程」压成一行显示（见下面 520px 断点里的覆盖规则）。
    ============================================================ */
 .course-card.is-offday .classroom,
 .course-card.is-offday .course-time,
@@ -508,6 +511,45 @@ html[data-theme="dark"] .course-card.is-holiday::before {
   font-size: clamp(32px, 12vw, 64px);
   font-weight: 900;
   line-height: 1.05;
+}
+
+/* ---------- 手机版（安卓竖屏）：假期卡片回到原来的尺寸，文字改一行 ----------
+   电脑端那张「和普通卡片一样大」的假期卡片放到手机上又高又空，
+   所以窄屏下改回原来的样子：不展示课程信息的那几行整行收起、不再占位，
+   卡片高度只由「小标题 + 今日暂无课程 + 底部小字」撑出来。
+
+   课程名那一行的高度特意保持原版的高度：原版是把「今日暂无课程」按课程名字号
+   （clamp(48px, 14vw, 64px)）折成了两行，这个高度就是卡片原来高度的来源。
+   现在只把这句话缩到一行（12vw，最窄的手机也放得下）并在这一行里居中显示，
+   于是卡片尺寸和原来一致，只是不再折行。 */
+@media (max-width: 520px) {
+
+  /* 课程信息整行收起（电脑端是 visibility:hidden 隐身占位，这里直接不占位） */
+  .course-card.is-offday .classroom,
+  .course-card.is-offday .course-time,
+  .course-card.is-offday .teacher,
+  .course-card.is-offday .countdown,
+  .course-card.is-offday .progress {
+    display: none;
+  }
+
+  /* 真实课程名缩成 0 号字（不再占宽高，只当挂 ::after 的容器 × 撑起原版行高） */
+  .course-card.is-offday .course-name {
+    font-size: 0;
+    /* 原版两行的高度：课程名字号 × 行高 1.05 × 2 行
+       ⇒ 改动 .course-name 的 font-size / line-height 时，这里要跟着一起改 */
+    min-height: calc(clamp(48px, 14vw, 64px) * 1.05 * 2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* 要显示的那句话：回到正常流（撑这一行的内容），缩到一行居中放进去 */
+  .course-card.is-offday .course-name::after {
+    position: static;
+    transform: none;
+    font-size: clamp(32px, 12vw, 64px);
+  }
 }
 
 /* ---------- 待上课卡片的底层装饰：抽象校园「教学楼 + 植被」线条插画 ----------
