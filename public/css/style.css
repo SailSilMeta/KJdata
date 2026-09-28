@@ -1610,6 +1610,11 @@ body.override-open {
     gap: 14px;
   }
 
+  /* 抽屉里的服务状态指示灯：左右外边距跟着抽屉内边距一起收窄，避免手机上看去偏窄 */
+  .today-service {
+    margin: 12px 14px 0;
+  }
+
   .today-time {
     min-width: 78px;
     font-size: 12px;
