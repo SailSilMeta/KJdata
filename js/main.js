@@ -422,11 +422,58 @@ function findNearestCourse(now) {
 // ============================================================
 
 /**
+ * 法定假期卡片：整张卡片进入长假期模式，只显示「今日暂无课程」。
+ *
+ * 为什么要单独处理：正方课表是按「星期几」排的，没有按日期停课，
+ * 假期里照常渲染就会把课表上那天该上的课当成「今天要上的课」，
+ * 与「假期不上课」的事实相矛盾。所以只要今天落在法定假期内，
+ * 一律不展示任何课程信息（课程名 / 教室 / 时间 / 老师 / 倒计时 / 进度条）。
+ *
+ * @param {string} holidayName 假期名（如「国庆节」）
+ */
+function renderHolidayCard(holidayName) {
+  dom.emptyTip.hidden = true;
+  dom.cardContent.hidden = false;
+
+  // 假期的每一天共用同一套静态内容，只在「假期变了」时重绘一次
+  const key = `holiday-${holidayName}`;
+  if (key !== currentKey) {
+    currentKey = key;
+    const view = CARD_VIEW.holiday;
+    dom.courseCard.className = 'course-card is-holiday';
+    dom.statusIcons.textContent = view.icons;
+    dom.statusText.textContent = view.subtitle;
+    dom.cardFoot.textContent = view.foot;
+    dom.courseName.textContent = '今日暂无课程';
+    // 假期里没有任何课程信息可展示，教室 / 时间 / 老师三行一起收起
+    dom.classroom.hidden = true;
+    dom.courseTime.hidden = true;
+    dom.teacher.hidden = true;
+  }
+
+  // 倒计时 / 进度条 / 假期提示一律不出现，卡片上只留一句「今日暂无课程」
+  dom.countdownHint.hidden = true;
+  dom.countdownMain.hidden = true;
+  dom.progress.hidden = true;
+  dom.holidayTip.hidden = true;
+  lastNumText = ''; // 假期结束回到课程卡片时，重新播放一次倒计时数字动画
+}
+
+/**
  * 渲染最近一节课卡片与倒计时
  * @param {Date} now        当前时间
  * @param {Object|null} found findNearestCourse 的结果
  */
 function renderCourse(now, found) {
+  // ---------- 法定假期判断（核心逻辑） ----------
+  // 只要「今天」落在法定假期内，就整张卡片走假期模式，不再看课表里今天排了什么课；
+  // 即使当天课表上还排着课、或距离下节课不足 48 小时，也一样按「今日暂无课程」展示
+  const holidayName = holidayOf(now);
+  if (holidayName) {
+    renderHolidayCard(holidayName);
+    return;
+  }
+
   // 没有任何课程时的空状态：区分「加载中 / 接口失败 / 确实无课」三种情况
   if (!found) {
     dom.courseCard.className = 'course-card';
@@ -469,7 +516,9 @@ function renderCourse(now, found) {
     dom.cardFoot.textContent = view.foot;
     dom.courseName.textContent = course.name;
     dom.classroom.textContent = course.classroom;
+    dom.classroom.hidden = false; // 从法定假期卡片切回来时，三行详情要重新出现
     dom.courseTime.textContent = `${course.startTime} - ${course.endTime}`;
+    dom.courseTime.hidden = false;
     dom.teacher.textContent = course.teacher || '';
     dom.teacher.hidden = !course.teacher;
 
@@ -740,6 +789,7 @@ window.TimetableMain = {
   findNearestCourse,         // 与主卡片一致的「最近一节课」判定，用于抽屉内高亮
   weekdayOf,                 // 日期 → 1=周一 … 7=周日
   toDateTime,                // (该日 0 点, "HH:mm") → Date
+  isHoliday: (date) => !!holidayOf(date), // 该日是否落在法定假期内（抽屉据此与大屏保持一致）
   /**
    * 「今日全部课程」抽屉里的「刷新课表」按钮调用：
    *   1. 重新拉取课表数据（loadCourses 内部已含合并覆盖层 + 重绘主卡片；

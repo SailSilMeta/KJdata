@@ -65,6 +65,10 @@
 
   /** 今日课程：按课表星期筛选当天的课，并按开始时间升序 */
   function todayCourses(day) {
+    // 法定假期：正方课表按星期排、没有按日期停课，假期里那天排的课并不上，
+    // 所以与大屏口径保持一致 —— 假期当天一律视为「今日暂无课程」
+    if (typeof api.isHoliday === 'function' && api.isHoliday(day)) return [];
+
     const weekday = api.weekdayOf(day);
     return api.getCourses()
       .filter((c) => Number(c.weekday) === weekday)
