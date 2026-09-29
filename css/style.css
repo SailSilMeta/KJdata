@@ -1166,6 +1166,77 @@ html[data-theme="dark"] .course-card.is-pending::after {
   border-color: var(--accent-blue);
 }
 
+/* ---------- 课程名 / 教室 / 老师：输入框 + 「选择」按钮 + 可选清单 ----------
+   输入框照旧可自由输入（保留自定义），右侧按钮展开课表里出现过的全部取值，
+   点一下即填进输入框。清单做成【就地展开】而不是浮层弹窗：
+   面板本身就是可滚动的底部抽屉，浮层在滚动容器里定位容易错位，
+   就地展开则天然跟着表单一起滚动，也不用操心层级与遮挡。 */
+.override-combo {
+  display: flex;
+  gap: 8px;
+}
+
+.override-combo input {
+  flex: 1;
+  min-width: 0; /* 允许输入框在窄屏上被压缩，否则长 placeholder 会把按钮挤出去 */
+}
+
+.override-pick {
+  flex: 0 0 auto;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text-sub);
+  background-color: var(--field-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.override-pick[aria-expanded="true"] {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.override-pick:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* 展开后的可选清单：高度封顶并内部滚动，课表再多也不会把表单撑长 */
+.override-options {
+  max-height: 180px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background-color: var(--field-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+}
+
+.override-option {
+  display: block;
+  width: 100%;
+  padding: 9px 10px;
+  font-family: inherit;
+  font-size: 15px;
+  text-align: left;
+  /* 同 .override-field input：用变量色，夜间不会继承浅色文字落到浅底上 */
+  color: var(--field-text);
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.override-option:active {
+  background-color: var(--stat-pending-soft); /* 按下时给一点主题蓝的淡底反馈 */
+  color: var(--accent-blue);
+}
+
 .override-error {
   font-size: 13px;
   color: #ef4444;

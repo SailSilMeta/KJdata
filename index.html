@@ -325,10 +325,18 @@
         <section class="override-section">
           <h3 class="override-subtitle" id="overrideFormTitle">新增临时课程</h3>
           <form class="override-form" id="overrideForm" novalidate>
-            <label class="override-field">
-              <span>课程名称 *</span>
-              <input type="text" id="ovName" placeholder="如：高等数学">
-            </label>
+            <!-- 课程名称 / 教室 / 老师：输入框照旧可自由输入，右侧「选择」按钮展开课表里
+                 出现过的全部取值，点一下就填进输入框，省去打字的功夫。
+                 可选清单由 override.js 的 renderOptions() 填充（取自正方课表 + 本地新增课程） -->
+            <div class="override-field">
+              <label for="ovName">课程名称 *</label>
+              <div class="override-combo">
+                <input type="text" id="ovName" placeholder="如：高等数学">
+                <button class="override-pick" id="ovNamePick" type="button"
+                        aria-expanded="false" aria-controls="ovNameOptions">选择 ▾</button>
+              </div>
+              <ul class="override-options" id="ovNameOptions" hidden></ul>
+            </div>
             <label class="override-field">
               <span>星期 *</span>
               <select id="ovWeekday">
@@ -351,14 +359,24 @@
                 <input type="time" id="ovEnd">
               </label>
             </div>
-            <label class="override-field">
-              <span>教室 *</span>
-              <input type="text" id="ovClassroom" placeholder="如：实训楼203">
-            </label>
-            <label class="override-field">
-              <span>老师</span>
-              <input type="text" id="ovTeacher" placeholder="选填">
-            </label>
+            <div class="override-field">
+              <label for="ovClassroom">教室 *</label>
+              <div class="override-combo">
+                <input type="text" id="ovClassroom" placeholder="如：实训楼203">
+                <button class="override-pick" id="ovClassroomPick" type="button"
+                        aria-expanded="false" aria-controls="ovClassroomOptions">选择 ▾</button>
+              </div>
+              <ul class="override-options" id="ovClassroomOptions" hidden></ul>
+            </div>
+            <div class="override-field">
+              <label for="ovTeacher">老师</label>
+              <div class="override-combo">
+                <input type="text" id="ovTeacher" placeholder="选填">
+                <button class="override-pick" id="ovTeacherPick" type="button"
+                        aria-expanded="false" aria-controls="ovTeacherOptions">选择 ▾</button>
+              </div>
+              <ul class="override-options" id="ovTeacherOptions" hidden></ul>
+            </div>
             <p class="override-error" id="overrideError" hidden></p>
             <div class="override-actions">
               <button type="submit" class="override-btn override-btn-primary" id="ovSubmit">新增课程</button>

@@ -171,7 +171,15 @@ const CARD_VIEW = {
   pending: { icons: '⏰ 📖', subtitle: '即将开课', foot: '做好准备，不要迟到' },
   ongoing: { icons: '✏️ 📚', subtitle: '上课进行中', foot: '专心听讲，认真学习' },
   // name：法定假期卡片上代替课程名显示的那句话（由 CSS 从 data 属性取，见 style.css）
-  holiday: { icons: '📅 🌙 ☁️', subtitle: '较长假期', foot: '当前暂无课程安排，可安心休息～', name: '今日暂无课程' }
+  // eveName：法定节假日「前一天」、今天已无课时显示的那句话 ——
+  //          今天上过课，写「今日暂无课程」会与抽屉里今天的课程列表矛盾，所以另起一句
+  holiday: {
+    icons: '📅 🌙 ☁️',
+    subtitle: '较长假期',
+    foot: '当前暂无课程安排，可安心休息～',
+    name: '今日暂无课程',
+    eveName: '假期已开始'
+  }
 };
 
 let courses = [];        // 合并本地覆盖层后、用于展示的课程列表
@@ -463,30 +471,57 @@ function renderCourse(now, found) {
   const course = found.course;
   const status = found.status;
 
+  // ---------- 法定节假日「前一天」判断（核心逻辑） ----------
+  // 明天是法定节假日、且今天不会再有任何课时，也直接进入假期模式卡片。
+  //
+  // 为什么需要：假期前一天，课表上仍按「星期几」排着明天的课，今天课上完之后，
+  // 卡片会继续倒计时到「明天那一节」—— 可明天是假期其实不上课，那个倒计时是假的。
+  // 所以只要今天不会再上课了，就切到假期卡片，不再推送原星期几的倒计时。
+  //
+  // 「今天不会再有任何课」的判定：findNearestCourse 返回的最近一节课落在明天及以后，
+  // 说明今天既没有正在上的课、也没有还没开始的课。今天本来就没排课时同样成立
+  // （结果一样是「今天不会再有课」），所以一并进入假期卡片。
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const nearest = found.start; // 最近一节课的开始时间（可能在今天，也可能在之后某天）
+  const noMoreToday = nearest.getFullYear() !== now.getFullYear() ||
+    nearest.getMonth() !== now.getMonth() ||
+    nearest.getDate() !== now.getDate();
+  const eveOfHoliday = noMoreToday && !!holidayOf(tomorrow);
+
+  // 假期模式：当天就是法定假期（dayoff），或法定节假日的前一天且今天已无课（eveOfHoliday）
+  const holidayMode = dayoff || eveOfHoliday;
+
   // ---------- 长间隔判断（核心逻辑） ----------
   // 待上课时，若「本节课开始时间 - 当前时间」超过 48 小时，
   // 则不展示分钟倒计时与进度条，卡片整体切换为「较长假期」状态
   const isLongGap = status === 'pending' && (found.start - now) > LONG_GAP_MS;
 
-  // 卡片三态：较长假期（法定假期也走这张卡片）/ 上课中 / 待上课，
+  // 卡片三态：较长假期（法定假期与节假日的前一天也走这张卡片）/ 上课中 / 待上课，
   // 决定配色与图标、小标题、底部小字
-  const cardState = (dayoff || isLongGap) ? 'holiday' : (status === 'ongoing' ? 'ongoing' : 'pending');
+  const cardState = (holidayMode || isLongGap) ? 'holiday' : (status === 'ongoing' ? 'ongoing' : 'pending');
 
   // 只有「课程 + 状态」变化时才重绘静态内容，避免每秒刷新造成闪烁。
-  // 末尾的 -off：法定假期卡与普通长假期卡配色相同、内容却完全不同，必须各自重绘一次
-  const key = `${course.id}-${found.start.getTime()}-${cardState}${dayoff ? '-off' : ''}`;
+  // 末尾的 -off / -eve：假期卡与普通长假期卡配色相同、内容却完全不同，必须各自重绘一次；
+  // 而「假期当天」与「假期前一天」都走同一张假期卡，配色、课程、状态全一样，
+  // 只有那句文案不同 —— 若不在这里分开，跨过 00:00 进入假期当天时 key 不变，
+  // 会跳过重绘，把「假期已开始」一直留到当天第一节课开始才刷新。
+  const key = `${course.id}-${found.start.getTime()}-${cardState}` +
+    (holidayMode ? (dayoff ? '-off' : '-eve') : '');
   if (key !== currentKey) {
     currentKey = key;
     const view = CARD_VIEW[cardState];
     // 类名决定卡片配色：极淡渐变底 + 细边框（夜间自动切换深色底与提亮主色）；
     // is-offday 只负责「把课程信息整片藏起来 + 在课程名处盖一句话」，不改配色
-    dom.courseCard.className = 'course-card is-' + cardState + (dayoff ? ' is-offday' : '');
+    dom.courseCard.className = 'course-card is-' + cardState + (holidayMode ? ' is-offday' : '');
     dom.statusIcons.textContent = view.icons;
     dom.statusText.textContent = view.subtitle;
     dom.cardFoot.textContent = view.foot;
     dom.courseName.textContent = course.name;
-    // 法定假期：要显示的那句话放进 data 属性，由 CSS 的 ::after 取出来盖在课程名位置
-    if (dayoff) dom.courseName.dataset.holidayMsg = CARD_VIEW.holiday.name;
+    // 假期模式：要显示的那句话放进 data 属性，由 CSS 的 ::after 取出来盖在课程名位置
+    // （当天是假期 →「今日暂无课程」；节假日的前一天 →「假期已开始」）
+    if (holidayMode) {
+      dom.courseName.dataset.holidayMsg = dayoff ? CARD_VIEW.holiday.name : CARD_VIEW.holiday.eveName;
+    }
     dom.classroom.textContent = course.classroom;
     dom.classroom.hidden = false; // 从法定假期卡片切回来时，三行详情要重新出现
     dom.courseTime.textContent = `${course.startTime} - ${course.endTime}`;
@@ -502,9 +537,9 @@ function renderCourse(now, found) {
   }
 
   // ---------- 长间隔：只展示假期提示，隐藏分钟倒计时与进度条 ----------
-  // 法定假期例外：倒计时与进度条照常渲染、照常占位（只是被 CSS 整片藏起来），
+  // 假期模式例外：倒计时与进度条照常渲染、照常占位（只是被 CSS 整片藏起来），
   // 卡片高度才与普通课程卡片一致
-  if (isLongGap && !dayoff) {
+  if (isLongGap && !holidayMode) {
     dom.countdownHint.hidden = true;
     dom.countdownMain.hidden = true;
     dom.progress.hidden = true;
