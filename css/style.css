@@ -1213,7 +1213,7 @@ html[data-theme="dark"] .course-card.is-pending::after {
   opacity: .7;
 }
 
-/* 展开 / 收起：手机上默认收起，只留一行时间，避免挡住卡片底部的小字 */
+/* 展开 / 收起按钮 */
 .debug-mini {
   padding: 2px 8px;
   border: 1px solid var(--card-border);
@@ -1223,6 +1223,48 @@ html[data-theme="dark"] .course-card.is-pending::after {
   font-family: inherit;
   font-size: 11px;
   cursor: pointer;
+}
+
+/* ---------- 收起态：紧贴屏幕底边的通栏细条 ----------
+   手机默认收起。收起态【不能】像展开态那样浮在右下角：
+   实测矮视口下（390×700、360×640）主卡片底边距屏幕底部只有 68~90px，
+   而浮层原本摆在「距底 68px」这一带（当初是为了躲开底部居中的
+   「查看今日全部课程」按钮），于是正好压住卡片底边的倒计时 / 进度条 / 页脚小字。
+   卡片高度由内容撑出、矮视口下竖直方向本就没有共存空间，索性把收起态
+   改成【贴着视口底边的通栏细条】（高 20px）：
+     1. 底边 0~20px 这一带卡片永远到不了（卡片底边最低也在距底 58px 以上），彻底不遮挡；
+     2. 通栏高度恰好停在底部居中按钮的下沿（按钮底边距屏底恒为 20px），二者上下相邻、互不交叠；
+     3. 条内内容只占左右两端、中间留空，按钮不会盖到任何文字。
+   展开态（.debug-body 露出时）仍走原来的右下角浮层定位，见下面的媒体查询。 */
+.debug-panel.is-collapsed {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: auto;
+  /* 高度恰好停在底部按钮的下沿：那个按钮底边距屏底恒为 20px（.page 的 padding-bottom），
+     所以通栏占 [0, 20px] 这条带，与按钮严格上下相邻、绝不交叠 */
+  height: 20px;
+  padding: 0 12px;
+  border-width: 1px 0 0;          /* 只留上边框，像一条贴底的状态栏 */
+  border-radius: 0;
+  display: flex;
+  flex-direction: row-reverse;    /* 反转后：被拨到的时间靠左，标题 + 展开按钮靠右 */
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  line-height: 1;                 /* 通栏很薄，行高收紧，保证内容完整落在 20px 内 */
+}
+
+.debug-panel.is-collapsed .debug-head {
+  margin: 0;                      /* 通栏里只占一行，去掉原来的下边距 */
+}
+
+.debug-panel.is-collapsed .debug-head em {
+  display: none;                  /* 「临时」二字在细条里太占地方 */
+}
+
+.debug-panel.is-collapsed .debug-mini {
+  padding: 1px 8px;               /* 按钮压到 18px 高，塞得进 20px 的通栏 */
 }
 
 .debug-panel.is-collapsed .debug-body {
@@ -1282,27 +1324,24 @@ html[data-theme="dark"] .course-card.is-pending::after {
 }
 
 /* 视口不宽时，底部居中的「查看今日全部课程」按钮（z-index 97，高约 40px、
-   底边距 20px）会与右下角的浮层横向重叠，而浮层 z-index 只有 90，会被按钮盖住。
-   把浮层整体抬到按钮带之上（68px ≈ 按钮顶边 60px + 8px 间隙），两者互不遮挡；
-   宽屏下按钮与浮层隔着足够距离，仍保持原来的贴角位置。 */
+   底边距 20px）会与右下角的【展开态】浮层横向重叠，而浮层 z-index 只有 90，
+   会被按钮盖住。把展开态整体抬到按钮带之上（68px ≈ 按钮顶边 60px + 8px 间隙），
+   两者互不遮挡；宽屏下按钮与浮层隔着足够距离，仍保持原来的贴角位置。
+   收起态已改为贴底通栏细条（见上方 .debug-panel.is-collapsed），不在此列。 */
 @media (max-width: 860px) {
   .debug-panel {
     bottom: 68px;
   }
 }
 
-/* 手机窄屏：面板更小、更贴右下角；收起时宽度按内容缩到最小的一个小条 */
+/* 手机窄屏：展开态面板更小、更贴右下角（收起态由贴底通栏接管，不受这里影响） */
 @media (max-width: 520px) {
   .debug-panel {
     right: 8px;
-    bottom: 68px;                  /* 同上：避开底部居中的「查看今日全部课程」按钮 */
+    bottom: 68px;                  /* 同上：展开态避开底部居中的「查看今日全部课程」按钮 */
     width: min(215px, 60vw);
     padding: 8px 10px;
     font-size: 11px;
-  }
-
-  .debug-panel.is-collapsed {
-    width: auto;
   }
 }
 
