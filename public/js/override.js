@@ -262,6 +262,78 @@
     $('overrideStatus').textContent = count
       ? `本机已保存 ${count} 处手动修改 · 更新于 ${store.updatedAt}`
       : '所有修改仅保存在本机浏览器';
+
+    renderOptions(items); // 课表变了，课程名 / 教室 / 老师的可选清单跟着重建
+  }
+
+  // ============================================================
+  // 表单：课程名 / 教室 / 老师的可点选清单
+  // ============================================================
+  // 目的：从课表里点选课程名 / 教室 / 老师，省去打字；同时输入框保持可自由输入，
+  // 所以是「输入框 + 可选清单」而不是把输入框换成下拉框（换成 select 就没法自定义了）。
+  const COMBO_FIELDS = [
+    { inputId: 'ovName', listId: 'ovNameOptions', pickId: 'ovNamePick', field: 'name' },
+    { inputId: 'ovClassroom', listId: 'ovClassroomOptions', pickId: 'ovClassroomPick', field: 'classroom' },
+    { inputId: 'ovTeacher', listId: 'ovTeacherOptions', pickId: 'ovTeacherPick', field: 'teacher' }
+  ];
+
+  /** 取出课表（正方 + 本地新增）里某字段的全部不重复取值，去空并按中文排序 */
+  function collectFieldValues(field, items) {
+    const seen = new Set();
+    for (const item of items) {
+      const value = String(item.data[field] || '').trim();
+      if (value) seen.add(value);
+    }
+    return Array.from(seen).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
+  }
+
+  /** 收起某个字段的可选清单 */
+  function collapseOptions(cfg) {
+    $(cfg.listId).hidden = true;
+    $(cfg.pickId).setAttribute('aria-expanded', 'false');
+  }
+
+  /** 展开 / 收起某个字段的可选清单（同一时刻只展开一个，避免把表单撑得很长） */
+  function toggleOptions(cfg) {
+    if (!$(cfg.listId).hidden) {
+      collapseOptions(cfg);
+      return;
+    }
+    for (const other of COMBO_FIELDS) collapseOptions(other);
+    $(cfg.listId).hidden = false;
+    $(cfg.pickId).setAttribute('aria-expanded', 'true');
+  }
+
+  /**
+   * 重建各字段的可选清单：取值来自课表，点一下即填进输入框
+   * @param {Array} items buildPanelList() 的结果（由 renderList 传入，避免重复组装）
+   */
+  function renderOptions(items) {
+    for (const cfg of COMBO_FIELDS) {
+      const listEl = $(cfg.listId);
+      const values = collectFieldValues(cfg.field, items);
+
+      const frag = document.createDocumentFragment();
+      for (const value of values) {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'override-option';
+        btn.textContent = value; // textContent 写入，课程名来自课表也不存在注入面
+        btn.addEventListener('click', () => {
+          $(cfg.inputId).value = value; // 只填输入框，仍可继续改成别的自定义值
+          collapseOptions(cfg);
+        });
+        li.appendChild(btn);
+        frag.appendChild(li);
+      }
+
+      listEl.textContent = '';
+      listEl.appendChild(frag);
+      // 课表里一条都没有时（例如首次打开、数据还没拉回来）按钮置灰不可点
+      $(cfg.pickId).disabled = values.length === 0;
+      collapseOptions(cfg); // 每次重建都先收起，表单回到干净状态
+    }
   }
 
   // ============================================================
@@ -281,6 +353,8 @@
     $('overrideFormTitle').textContent = '新增临时课程';
     $('ovSubmit').textContent = '新增课程';
     $('overrideError').hidden = true;
+    // 课程名 / 教室 / 老师的可选清单也一并收起，表单回到干净状态
+    for (const cfg of COMBO_FIELDS) collapseOptions(cfg);
   }
 
   /** 载入某节课的数据到表单，进入编辑模式 */
@@ -501,6 +575,11 @@
     $('overrideClose').addEventListener('click', closePanel);
     $('ovReset').addEventListener('click', resetForm);
     $('overrideClear').addEventListener('click', clearAll);
+
+    // 课程名 / 教室 / 老师的「选择」按钮：展开或收起课表取值清单
+    for (const cfg of COMBO_FIELDS) {
+      $(cfg.pickId).addEventListener('click', () => toggleOptions(cfg));
+    }
 
     // 点击遮罩空白处关闭面板
     $('overrideMask').addEventListener('click', (e) => {
