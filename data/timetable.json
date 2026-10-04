@@ -105,14 +105,6 @@
       "teacher": "常家瑶"
     },
     {
-      "name": "形势与政策 V",
-      "weekday": 5,
-      "startTime": "10:40",
-      "endTime": "12:00",
-      "classroom": "H3-404(江)",
-      "teacher": "都丹阳"
-    },
-    {
       "name": "数据库系统原理",
       "weekday": 5,
       "startTime": "14:00",
@@ -121,6 +113,6 @@
       "teacher": "陈伟聪"
     }
   ],
-  "updatedAt": "2026-10-04 23:40:14",
+  "updatedAt": "2026-10-05 03:12:49",
   "source": "zf_api"
 }
