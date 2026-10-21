@@ -67,9 +67,11 @@ timetable-system/
 │   │   └── today.js            # 今日全部课程抽屉：上午 / 下午分组、状态配色、刷新课表、服务状态灯
 │   └── data/
 │       ├── timetable.json      # 课表数据（Actions 定时生成，不入库）
-│       └── fetch-status.json   # 抓取心跳：本次是否成功 / 尝试时间 / 最近一次成功时间（不入库）
+│       ├── fetch-status.json   # 抓取心跳：本次是否成功 / 尝试时间 / 最近一次成功时间（不入库）
+│       └── lan-hosts.json      # 部署机内网 IP（本机脚本生成并强制入库，仅 ?debug=1 读取）
 ├── scripts/
-│   └── fetch_timetable.py      # 登录正方 → 拉课表 → 标准化 → 写出上面的 JSON
+│   ├── fetch_timetable.py      # 登录正方 → 拉课表 → 标准化 → 写出上面的 JSON
+│   └── publish_lan_ip.py       # 取本机内网 IP → 写 lan-hosts.json → 提交推送（计划任务每 5 分钟）
 ├── .github/workflows/
 │   └── update-timetable.yml    # 定时抓取 + 把 public/ 发布到 gh-pages 分支
 ├── api/                        # 仅本地调试用的 Python 版本（线上不部署）
@@ -120,6 +122,16 @@ timetable-system/
 ```
 
 `updatedAt` 是数据实际拉取的时间，可以据此判断课表数据有多新。
+
+同目录下还有两个文件：
+
+| 文件 | 内容 | 谁写 |
+| --- | --- | --- |
+| `data/fetch-status.json` | 抓取心跳：本次是否成功、尝试时间、最近一次成功时间 | Actions 每小时 |
+| `data/lan-hosts.json` | 部署机当前内网 IP（只在 `?debug=1` 时被页面读取，见第八节） | 本机计划任务 |
+
+`public/data/` 整体在 `.gitignore` 里（课表数据不入库），`lan-hosts.json` 由脚本用 `git add -f` 强制加入，
+因为它必须跟着 `public/` 一起发布。
 
 ---
 
@@ -436,6 +448,44 @@ Actions 每小时会自动更新一次。
 - **回到真实时间**：一键复原
 - 拨动后的时间**对全站生效**：顶部时钟、倒计时、课程状态、进度条、节假日 / 节气文字、
   日间 / 夜间主题自动切换，全部按被拨动的时间重算，无需刷新。
+- **本机服务地址**：列出这台部署机当前的内网 IP，点右侧「复制」直接取走（见下节）。
+
+### 本机服务地址（内网 IP）
+
+在外面用手机或其他电脑打开页面时，常常需要知道「部署这台机器现在在局域网里的地址」，
+才能连上它起的本地服务。浮层底部因此加了一块「本机服务地址」。
+
+**地址不写在前端代码里**，而是由本机的脚本单独发布成 `data/lan-hosts.json`，
+页面**只在带 `?debug=1` 时**才去读取。正常访客既看不到这块内容，也不会发起这个请求。
+
+自动更新（Windows，已配置计划任务）：
+
+```bash
+python scripts/publish_lan_ip.py
+```
+
+脚本做三件事：
+
+1. 用 `Get-NetIPAddress` 取本机 IPv4，只留下 `172.20.` 开头、且不是虚拟网卡
+   （Hyper-V / VirtualBox / VMware）的地址，连同网卡名（以太网 / WLAN）一起写出；
+2. 地址与上次一样就什么都不做（不会每 5 分钟刷一次提交）；
+3. 地址变了才 `git add -f public/data/lan-hosts.json` → 提交 → 推送 `main`，
+   随后 Actions 会把 `public/` 重新发布到 `gh-pages`，各设备刷新页面即可看到新地址。
+
+计划任务每 5 分钟检查一次；日志在 `%LOCALAPPDATA%\KJdata\lan-ip.log`。
+换网段（不再是 `172.20.`）时改脚本顶部的 `PREFIX` 即可。
+
+> 为什么必须提交进仓库：Actions 每小时是用 `main` 里的 `public/` 整目录覆盖 `gh-pages` 的，
+> 直接往 `gh-pages` 写会在下一次任务被抹掉。
+>
+> 为什么可以接受明文：`172.20.x.x` 是内网地址，公网本就访问不到；页面上不展示，
+> 只有知道要加 `?debug=1` 的人才看得到。若哪天想连仓库里也不留明文，再改成加密发布。
+
+移除计划任务：
+
+```bash
+schtasks /Delete /TN "KJdata-LanIP" /F
+```
 
 ### 行为说明
 
@@ -450,7 +500,7 @@ Actions 每小时会自动更新一次。
 
 时间调试是**纯前端**的临时改动，不涉及任何服务端能力：
 
-- 不发起任何网络请求、不读取学号密码等凭据、不写 localStorage；
+- 除带 `?debug=1` 时读取 `data/lan-hosts.json` 之外，不发起任何网络请求、不读取学号密码等凭据、不写 localStorage；
 - 只影响**当前浏览器这一次打开**的显示，换个设备或刷新即恢复，不会写回教务系统；
 - 网址参数（`date` / `now`）先经严格正则校验、再转成数字构造 `Date`，
   浮层内容为静态模板且统一用 `textContent` 写入，不存在脚本注入面；
