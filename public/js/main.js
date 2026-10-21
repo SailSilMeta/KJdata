@@ -47,9 +47,6 @@ const LONG_GAP_MS = 48 * 60 * 60 * 1000; // 长间隔阈值：48 小时（2880 �
 const DEBUG_ENABLED = new URLSearchParams(location.search).has('debug');
 let debugOffset = 0; // 假造时间相对真实时间的偏移毫秒数，0 表示真实时间
 
-// 本机地址超过这么多分钟没更新，状态灯就转灰（计划任务 5 分钟一轮，放宽到 30 分钟避免误判）
-const LAN_STALE_MINUTES = 30;
-
 /** 当前时间：调试模式下按偏移量假造，否则就是真实系统时间 */
 function nowDate() {
   return debugOffset ? new Date(Date.now() + debugOffset) : new Date();
@@ -164,19 +161,16 @@ function loadLanHosts(manual) {
         listEl.appendChild(li);
       }
 
-      // 状态灯：绿灯 = 读到了且数据够新；灰灯 = 读到了但太久没更新（电脑可能没开机 / 没同步）
+      // 状态灯：绿灯 = 成功读到地址文件；红 = 读不到（还没发布过 / 网络异常）
+      // 不按 updatedAt 判新旧：脚本只在地址变化时才写文件，地址不变时这个时间会一直是旧的，
+      // 拿它当「过期」会天天误报。
       const updated = data.updatedAt || '';
-      const stamp = updated ? Date.parse(updated.replace(' ', 'T')) : NaN;
-      const ageMin = isNaN(stamp) ? Infinity : (Date.now() - stamp) / 60000;
-      const stale = ageMin > LAN_STALE_MINUTES;
-      dot.className = 'service-dot' + (stale ? '' : ' is-ok');
+      dot.className = 'service-dot is-ok';
 
       if (!updated) {
-        timeEl.textContent = manual ? '已刷新：地址已读取（无更新时间）' : '';
-      } else if (stale) {
-        timeEl.textContent = `更新于 ${updated} · 数据较旧（电脑可能未开机或还没同步）`;
+        timeEl.textContent = '地址已读取（无更新时间）';
       } else {
-        timeEl.textContent = `更新于 ${updated}${manual ? ' · 已是最新' : ''}`;
+        timeEl.textContent = `更新于 ${updated}${manual ? ' · 已重新读取' : ''}`;
       }
     })
     .catch(() => {
