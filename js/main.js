@@ -79,6 +79,84 @@ function refreshDebugPanel(now) {
   }
 }
 
+/** 复制一段文字；局域网 IP 访问时不是安全上下文，navigator.clipboard 不可用，需退回 execCommand */
+function copyLanText(text, btn) {
+  const done = () => {
+    const old = btn.textContent;
+    btn.textContent = '已复制';
+    setTimeout(() => { btn.textContent = old; }, 1200);
+  };
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); done(); } catch (err) { btn.textContent = '复制失败'; }
+    document.body.removeChild(ta);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done, fallback);
+  } else {
+    fallback();
+  }
+}
+
+/**
+ * 读取并渲染「本机服务地址」。
+ * 地址由本机的 scripts/publish_lan_ip.py 定时写进 data/lan-hosts.json 并推送，
+ * 线上是静态文件，所以手机 / 电脑打开同一页面都能看到这台电脑最新的内网地址。
+ * 只有 ?debug=1 才会调用这里，正常访客不会去请求这个文件。
+ */
+function loadLanHosts() {
+  const listEl = $('debugLanList');
+  const timeEl = $('debugLanTime');
+  if (!listEl || !timeEl) return;
+
+  // 加时间戳绕开缓存，保证刷新页面拿到的就是最新一次发布的地址
+  fetch(`data/lan-hosts.json?t=${Date.now()}`, { cache: 'no-store' })
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .then((data) => {
+      const hosts = Array.isArray(data) ? data : (data.hosts || []);
+      if (!hosts.length) throw new Error('列表为空');
+
+      listEl.textContent = '';
+      for (const host of hosts) {
+        const li = document.createElement('li');
+        li.className = 'debug-lan-item';
+
+        const ip = document.createElement('span');
+        ip.className = 'debug-lan-ip';
+        ip.textContent = host.ip;
+
+        const name = document.createElement('span');
+        name.className = 'debug-lan-name';
+        name.textContent = host.name || '';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'debug-mini';
+        btn.textContent = '复制';
+        btn.addEventListener('click', () => copyLanText(host.ip, btn));
+
+        li.appendChild(ip);
+        li.appendChild(name);
+        li.appendChild(btn);
+        listEl.appendChild(li);
+      }
+
+      timeEl.textContent = data.updatedAt ? `更新于 ${data.updatedAt}` : '';
+    })
+    .catch(() => {
+      listEl.textContent = '';
+      timeEl.textContent = '未获取到地址（本机脚本还没发布过，或网络异常）';
+    });
+}
+
 /** 调试浮层：仅 ?debug=1 时创建，支持网址参数预设、增减天数 / 小时、直接选时刻、一键复原 */
 function initDebug() {
   if (!DEBUG_ENABLED) return;
@@ -119,6 +197,13 @@ function initDebug() {
       </div>
       <div class="debug-row">
         <button type="button" id="debugReset" class="debug-wide">回到真实时间</button>
+      </div>
+      <!-- 本机服务地址：由本机的定时脚本发布到 data/lan-hosts.json，
+           页面只在带 ?debug=1 时才去取，正常访客看不到 -->
+      <div class="debug-lan">
+        <p class="debug-line debug-lan-title">本机服务地址</p>
+        <ul class="debug-lan-list" id="debugLanList"></ul>
+        <p class="debug-line debug-lan-time" id="debugLanTime">读取中…</p>
       </div>
     </div>`;
   document.body.appendChild(panel);
@@ -163,6 +248,7 @@ function initDebug() {
   });
 
   refreshDebugPanel();
+  loadLanHosts(); // 地址每次打开页面取一次，保证看到的是最新发布的
 }
 
 // 三种状态的卡片文案：图标 / 小标题 / 底部小字

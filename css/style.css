@@ -1394,6 +1394,59 @@ html[data-theme="dark"] .course-card.is-pending::after {
   transform: scale(.97);
 }
 
+/* ---------- 调试浮层里的「本机服务地址」 ----------
+   地址不写死在页面里，由本机的定时脚本发布到 data/lan-hosts.json，
+   只有带 ?debug=1 的页面才会去取，正常访客看不到，也不会发起这个请求。 */
+.debug-lan {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--card-border);
+}
+
+.debug-lan-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+
+.debug-lan-list {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.debug-lan-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* IP 是主角：等宽数字 + 加粗，扫一眼就能读出来 */
+.debug-lan-ip {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.debug-lan-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--text-sub);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.debug-lan-time {
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--text-sub);
+  opacity: .8;
+}
+
 /* 视口不宽时，底部居中的「查看今日全部课程」按钮（z-index 97，高约 40px、
    底边距 20px）会与右下角的【展开态】浮层横向重叠，而浮层 z-index 只有 90，
    会被按钮盖住。把展开态整体抬到按钮带之上（68px ≈ 按钮顶边 60px + 8px 间隙），
