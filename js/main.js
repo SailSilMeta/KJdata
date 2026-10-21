@@ -40,12 +40,15 @@ const LONG_GAP_MS = 48 * 60 * 60 * 1000; // 长间隔阈值：48 小时（2880 �
 // 拨动后的「当前时间」作用于全站：时钟、倒计时、课程状态、节假日 / 节气、主题自动切换。
 // 用浮层里的「回到真实时间」复原；偏移不写 localStorage，刷新页面即回真实时间。
 //
-// 安全性：纯前端临时改动，不发任何网络请求、不读凭据、不写 localStorage，
-//         只影响当前浏览器这一次打开的显示；网址参数先经严格正则校验再转数字，
-//         面板内容为静态模板且统一用 textContent 写入，不存在注入面。
+// 安全性：纯前端临时改动、不读凭据、不写 localStorage，只影响当前浏览器这一次打开的显示；
+//         唯一的网络请求是读取本机地址文件 data/lan-hosts.json（见 loadLanHosts）；
+//         网址参数先经严格正则校验再转数字，面板内容为静态模板且统一用 textContent 写入，不存在注入面。
 // ============================================================
 const DEBUG_ENABLED = new URLSearchParams(location.search).has('debug');
 let debugOffset = 0; // 假造时间相对真实时间的偏移毫秒数，0 表示真实时间
+
+// 本机地址超过这么多分钟没更新，状态灯就转灰（计划任务 5 分钟一轮，放宽到 30 分钟避免误判）
+const LAN_STALE_MINUTES = 30;
 
 /** 当前时间：调试模式下按偏移量假造，否则就是真实系统时间 */
 function nowDate() {
@@ -108,11 +111,23 @@ function copyLanText(text, btn) {
  * 地址由本机的 scripts/publish_lan_ip.py 定时写进 data/lan-hosts.json 并推送，
  * 线上是静态文件，所以手机 / 电脑打开同一页面都能看到这台电脑最新的内网地址。
  * 只有 ?debug=1 才会调用这里，正常访客不会去请求这个文件。
+ *
+ * 注意：页面是公开静态站，点「刷新」只能重新读取**已经发布**的地址，
+ * 没法让本机此刻去执行脚本（浏览器不允许网页驱动本机程序）。开机后等不及 5 分钟时，
+ * 计划任务在登录时也会跑一次，见 README 第八节。
+ *
+ * @param {boolean} manual 是否用户点了「刷新」（用于区分文案与按钮态）
  */
-function loadLanHosts() {
+function loadLanHosts(manual) {
   const listEl = $('debugLanList');
   const timeEl = $('debugLanTime');
-  if (!listEl || !timeEl) return;
+  const dot = $('debugLanDot');
+  const btn = $('debugLanRefresh');
+  if (!listEl || !timeEl || !dot || !btn) return;
+  if (btn.disabled) return; // 上一次还在读取中
+
+  btn.disabled = true;
+  if (manual) btn.textContent = '刷新中…';
 
   // 加时间戳绕开缓存，保证刷新页面拿到的就是最新一次发布的地址
   fetch(`data/lan-hosts.json?t=${Date.now()}`, { cache: 'no-store' })
@@ -137,23 +152,41 @@ function loadLanHosts() {
         name.className = 'debug-lan-name';
         name.textContent = host.name || '';
 
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'debug-mini';
-        btn.textContent = '复制';
-        btn.addEventListener('click', () => copyLanText(host.ip, btn));
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'debug-mini';
+        copyBtn.textContent = '复制';
+        copyBtn.addEventListener('click', () => copyLanText(host.ip, copyBtn));
 
         li.appendChild(ip);
         li.appendChild(name);
-        li.appendChild(btn);
+        li.appendChild(copyBtn);
         listEl.appendChild(li);
       }
 
-      timeEl.textContent = data.updatedAt ? `更新于 ${data.updatedAt}` : '';
+      // 状态灯：绿灯 = 读到了且数据够新；灰灯 = 读到了但太久没更新（电脑可能没开机 / 没同步）
+      const updated = data.updatedAt || '';
+      const stamp = updated ? Date.parse(updated.replace(' ', 'T')) : NaN;
+      const ageMin = isNaN(stamp) ? Infinity : (Date.now() - stamp) / 60000;
+      const stale = ageMin > LAN_STALE_MINUTES;
+      dot.className = 'service-dot' + (stale ? '' : ' is-ok');
+
+      if (!updated) {
+        timeEl.textContent = manual ? '已刷新：地址已读取（无更新时间）' : '';
+      } else if (stale) {
+        timeEl.textContent = `更新于 ${updated} · 数据较旧（电脑可能未开机或还没同步）`;
+      } else {
+        timeEl.textContent = `更新于 ${updated}${manual ? ' · 已是最新' : ''}`;
+      }
     })
     .catch(() => {
       listEl.textContent = '';
+      dot.className = 'service-dot is-error';
       timeEl.textContent = '未获取到地址（本机脚本还没发布过，或网络异常）';
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = '刷新';
     });
 }
 
@@ -199,9 +232,16 @@ function initDebug() {
         <button type="button" id="debugReset" class="debug-wide">回到真实时间</button>
       </div>
       <!-- 本机服务地址：由本机的定时脚本发布到 data/lan-hosts.json，
-           页面只在带 ?debug=1 时才去取，正常访客看不到 -->
+           页面只在带 ?debug=1 时才去取，正常访客看不到。
+           右侧小圆点表示「地址是否还能读到、是否够新」，按钮用来重新读取一次 -->
       <div class="debug-lan">
-        <p class="debug-line debug-lan-title">本机服务地址</p>
+        <p class="debug-line debug-lan-title">
+          <span>本机服务地址</span>
+          <span class="debug-lan-ops">
+            <span class="service-dot" id="debugLanDot" aria-hidden="true"></span>
+            <button type="button" class="debug-mini" id="debugLanRefresh">刷新</button>
+          </span>
+        </p>
         <ul class="debug-lan-list" id="debugLanList"></ul>
         <p class="debug-line debug-lan-time" id="debugLanTime">读取中…</p>
       </div>
@@ -246,6 +286,9 @@ function initDebug() {
     debugOffset = 0;
     applyChange();
   });
+
+  // 「刷新」重新读取一次已发布的地址（绕开缓存），用于刚开机、地址刚更新后的即时查看
+  $('debugLanRefresh').addEventListener('click', () => loadLanHosts(true));
 
   refreshDebugPanel();
   loadLanHosts(); // 地址每次打开页面取一次，保证看到的是最新发布的

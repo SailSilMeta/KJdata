@@ -1404,9 +1404,25 @@ html[data-theme="dark"] .course-card.is-pending::after {
 }
 
 .debug-lan-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 11px;
   font-weight: 700;
   color: var(--text-sub);
+}
+
+/* 标题右侧：状态灯 + 「刷新」按钮 */
+.debug-lan-ops {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 复用课程服务那套小圆点，但这里不需要顶部的 4px 偏移 */
+.debug-lan-ops .service-dot {
+  margin-top: 0;
 }
 
 .debug-lan-list {
