@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
+r"""
 把本机当前的内网 IPv4 地址发布到 public/data/lan-hosts.json，并提交推送。
 
 用途：人在外面通过手机 / 另一台电脑打开课表页面时，能随时看到这台部署机
