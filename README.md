@@ -475,6 +475,10 @@ python scripts/publish_lan_ip.py
 计划任务**登录时跑一次 + 之后每 5 分钟检查一次**；日志在 `%LOCALAPPDATA%\KJdata\lan-ip.log`。
 换网段（不再是 `172.20.`）时改脚本顶部的 `PREFIX` 即可。
 
+> **静默运行**：计划任务用 `pythonw.exe`（无控制台的 Python）启动，脚本内部的
+> `powershell` / `git` 子进程统一加了 `CREATE_NO_WINDOW`，所以不会每隔 5 分钟
+> 在屏幕上闪一下黑色控制台窗口。手动调试时仍可直接用 `python`，日志会同时打到终端。
+
 **右侧状态灯与「刷新」按钮**
 
 - 🟢 绿：成功读到地址文件（地址可用）

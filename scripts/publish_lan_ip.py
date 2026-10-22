@@ -13,8 +13,11 @@
 安全取舍：文件在公开仓库里是明文（172.20.x.x 属于内网地址，公网本就访问不到），
 页面本身不展示，只有在网址上带 ?debug=1 的人才会看到。
 
-运行环境：Windows + Python 3（本机已有），由计划任务每 5 分钟调用一次：
-    python scripts/publish_lan_ip.py
+运行环境：Windows + Python 3（本机已有），由计划任务用 **pythonw.exe**（无控制台）调用：
+    pythonw scripts\publish_lan_ip.py
+之所以不用 python.exe：它是控制台程序，每次运行都会弹出一个黑窗口再瞬间关闭，
+屏幕会闪一下。脚本内部起的 powershell / git 子进程也统一加了 CREATE_NO_WINDOW，
+否则它们会各自新开控制台窗口。手动调试时仍可用 python.exe，日志会同时打到终端。
 
 行为约定：
   - 地址没变化 → 不写文件、不提交（避免每 5 分钟刷一次提交）
@@ -41,11 +44,26 @@ PREFIX = "172.20."
 # 虚拟网卡（Hyper-V / VirtualBox / VMware）也会拿到 172.x 地址，对远程访问没有意义，排除
 SKIP_ALIAS = ("vethernet", "virtualbox", "vmware", "hyper-v", "loopback", "default switch")
 
+# 计划任务用 pythonw.exe 运行（GUI 子系统，没有控制台窗口）。
+# 但 pythonw 自己启动 powershell / git 时，若不指定 CREATE_NO_WINDOW，Windows 会给
+# 每个控制台子进程新开一个黑窗口再瞬间关掉 —— 这就是之前每 5 分钟屏幕闪黑的原因。
+CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+
+def run_hidden(cmd, **kwargs):
+    """启动子进程且完全不弹出窗口（计划任务 / pythonw 下必须这样起 powershell 和 git）。"""
+    return subprocess.run(cmd, creationflags=CREATE_NO_WINDOW, **kwargs)
+
 
 def log(msg):
-    """带时间戳追加到日志文件；同时打到控制台（手动运行时能直接看到）。"""
+    """带时间戳追加到日志文件；手动在终端运行时同时打到控制台。"""
     line = f"[{datetime.datetime.now():%Y-%m-%d %H:%M:%S}] {msg}"
-    print(line)
+    # pythonw.exe 下 sys.stdout 是 None，直接 print 会抛异常导致脚本静默失败
+    if sys.stdout is not None:
+        try:
+            print(line)
+        except OSError:
+            pass
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         if LOG_FILE.exists() and LOG_FILE.stat().st_size > 200 * 1024:
@@ -71,7 +89,7 @@ def collect_hosts():
             "Select-Object IPAddress,InterfaceAlias | ConvertTo-Json -Compress | "
             f"Set-Content -LiteralPath '{tmp}' -Encoding UTF8"
         )
-        subprocess.run(
+        run_hidden(
             ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
             check=True, capture_output=True, timeout=60,
         )
@@ -107,9 +125,9 @@ def collect_hosts():
 
 
 def git(*args, check=True):
-    """在仓库根目录执行 git；禁掉交互式输入，避免计划任务里卡住。"""
+    """在仓库根目录执行 git；禁掉交互式输入，且不弹出窗口。"""
     env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
-    return subprocess.run(
+    return run_hidden(
         ["git", *args], cwd=str(REPO), check=check,
         capture_output=True, text=True, encoding="utf-8", errors="replace", env=env,
     )
