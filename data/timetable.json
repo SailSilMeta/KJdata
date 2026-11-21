@@ -89,6 +89,14 @@
       "teacher": "陈伟聪"
     },
     {
+      "name": "体能训练 I",
+      "weekday": 4,
+      "startTime": "12:30",
+      "endTime": "13:50",
+      "classroom": "TY104(江)",
+      "teacher": "陈宙涛"
+    },
+    {
       "name": "中国近现代史纲要",
       "weekday": 4,
       "startTime": "14:00",
@@ -113,6 +121,6 @@
       "teacher": "陈伟聪"
     }
   ],
-  "updatedAt": "2026-10-26 11:23:28",
+  "updatedAt": "2026-11-22 00:58:52",
   "source": "zf_api"
 }
