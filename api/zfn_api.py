@@ -1423,8 +1423,16 @@ class Client:
         if not sessions:
             return None
         args = re.findall(r"(\d+)", sessions)
-        start_time = cls.raspisanie[int(args[0]) + 1][0]
-        end_time = cls.raspisanie[int(args[0]) + 1][1]
+        if not args:
+            return None
+        # [本地修改] 上游用 raspisanie[节次 + 1] 取值，一旦教务系统返回的节次
+        # 超出内置作息表（本校实际会出现「13-14节」），就会抛 IndexError 并让
+        # 整份课表拉取失败（code=999）。本项目不使用 time 字段，越界时返回 None 即可。
+        try:
+            start_time = cls.raspisanie[int(args[0]) + 1][0]
+            end_time = cls.raspisanie[int(args[0]) + 1][1]
+        except IndexError:
+            return None
         return f"{start_time}~{end_time}"
 
     @classmethod
